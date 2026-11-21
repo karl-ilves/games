@@ -2347,6 +2347,22 @@
                     </div>
                 </div>
 
+                <!-- PAdmin Incoming Updates Box (Uuendused, mis saadetakse PAdmin kontolt) -->
+                <div id="owner-padmin-updates-section" style="margin-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
+                        <div style="font-size: 0.85rem; font-weight: 800; color: #ffd32a; text-transform: uppercase; display: flex; align-items: center; gap: 6px;">
+                            <span>📥</span>
+                            <span>PAdmini Saadetud Uuendused (<span id="owner-padmin-updates-count">0</span>):</span>
+                        </div>
+                        <span style="font-size: 0.74rem; color: #94a3b8;">Automaatselt veatuks viimistletud ettepanekud PAdminilt</span>
+                    </div>
+                    <div id="owner-padmin-incoming-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
+                        <div style="text-align: center; color: #718093; padding: 16px; font-size: 0.82rem; font-style: italic; border: 1px dashed rgba(255, 255, 255, 0.1); border-radius: 8px;">
+                            Ühtegi PAdmini saadetud uuendust pole veel laekunud.
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Hidden legacy containers to prevent any runtime JS errors -->
                 <div style="display: none;">
                     <span id="owner-updates-published-badge"></span>

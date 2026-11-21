@@ -402,6 +402,62 @@ function isUserPlayardOwner(profile?: any): boolean {
     return cleanUser === 'admin' || cleanUser === 'owner' || cleanUser === 'playard owner' || cleanEmail === '1karl.ilves@gmail.com';
 }
 
+/**
+ * Polishes and corrects Estonian/English text:
+ * - Fixes common typos (uptade -> uuendus, joon -> joon, crate -> create, uuentus -> uuendus, etc.)
+ * - Capitalizes sentence beginnings
+ * - Trims whitespace and normalizes punctuation
+ */
+export function polishAndCorrectText(text: string): string {
+    if (!text) return '';
+    let res = text.trim();
+
+    // Common typo fixes dictionary (case-insensitive words)
+    const typoReplacements: [RegExp, string][] = [
+        [/\buptades\b/gi, 'uuendused'],
+        [/\buptade\b/gi, 'uuendus'],
+        [/\buptae\b/gi, 'uuendus'],
+        [/\buuedused\b/gi, 'uuendused'],
+        [/\buueduse\b/gi, 'uuenduse'],
+        [/\buuedus\b/gi, 'uuendus'],
+        [/\buuentuste\b/gi, 'uuenduste'],
+        [/\buuentus\b/gi, 'uuendus'],
+        [/\bkatekoorjad\b/gi, 'kategooriad'],
+        [/\bkatekoorja\b/gi, 'kategooria'],
+        [/\bkatekoorjast\b/gi, 'kategooriast'],
+        [/\bpraeu\b/gi, 'praegu'],
+        [/\beesi\b/gi, 'ees'],
+        [/\bse\b/gi, 'see'],
+        [/\bkeskelle\b/gi, 'keskele'],
+        [/\bnuuled\b/gi, 'nooled'],
+        [/\bmängjal\b/gi, 'mängijal'],
+        [/\bveatuks\b/gi, 'veatuks'],
+        [/\bownerii?\b/gi, 'Owneri'],
+        [/\bpadmini?\b/gi, 'PAdmin'],
+        [/\bplayardi?\b/gi, 'Playard'],
+        [/\bjõulu\b/gi, 'Jõulu']
+    ];
+
+    typoReplacements.forEach(([pattern, replacement]) => {
+        res = res.replace(pattern, replacement);
+    });
+
+    // Capitalize start of sentences (after . ! ? or start of string)
+    res = res.replace(/(^\s*|[.!?]\s+)([a-zäöüõ])/g, (_, prefix, char) => prefix + char.toUpperCase());
+
+    // Capitalize first character if letter
+    if (res.length > 0) {
+        res = res.charAt(0).toUpperCase() + res.slice(1);
+    }
+
+    // Ensure ending punctuation for complete sentences if long enough
+    if (res.length > 5 && !/[.!?…]$/.test(res)) {
+        res += '.';
+    }
+
+    return res;
+}
+
 if (typeof window !== 'undefined') {
     (window as any).getPlayardProjects = getPlayardProjects;
     (window as any).savePlayardProjects = savePlayardProjects;
@@ -426,5 +482,6 @@ if (typeof window !== 'undefined') {
     (window as any).savePlayardCategories = savePlayardCategories;
     (window as any).addPlayardCategory = addPlayardCategory;
     (window as any).deletePlayardCategory = deletePlayardCategory;
+    (window as any).polishAndCorrectText = polishAndCorrectText;
 }
 

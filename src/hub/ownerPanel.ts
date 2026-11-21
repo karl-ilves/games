@@ -1753,6 +1753,91 @@ export function renderOwnerUpdatesView(): void {
             }
         }
 
+    // 1.5. Render PAdmin Incoming Updates Box (Ettepanekud / uuendused otse PAdminilt)
+    const padminIncomingList = document.getElementById('owner-padmin-incoming-list');
+    const padminCountBadge = document.getElementById('owner-padmin-updates-count');
+    const padminUpdates = allUpdates.filter(u => (u.author || '').toLowerCase() === 'padmin');
+
+    if (padminCountBadge) {
+        padminCountBadge.textContent = String(padminUpdates.length);
+    }
+
+    if (padminIncomingList) {
+        padminIncomingList.innerHTML = '';
+        if (padminUpdates.length === 0) {
+            padminIncomingList.innerHTML = '<div style="text-align: center; color: #718093; padding: 16px; font-size: 0.82rem; font-style: italic; border: 1px dashed rgba(255, 255, 255, 0.1); border-radius: 8px;">Ühtegi PAdmini saadetud uuendust pole veel laekunud.</div>';
+        } else {
+            padminUpdates.forEach(upd => {
+                const card = document.createElement('div');
+                const isPub = upd.status === 'published';
+                const d = new Date(upd.publishedAt || upd.createdAt);
+                const dateStr = `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+
+                card.style.cssText = `
+                    background: rgba(255, 255, 255, 0.04);
+                    border: 1px solid ${isPub ? 'rgba(46, 204, 113, 0.4)' : 'rgba(255, 211, 42, 0.4)'};
+                    border-left: 4px solid ${isPub ? '#2ecc71' : '#ffd32a'};
+                    border-radius: 10px;
+                    padding: 12px 14px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 12px;
+                    flex-wrap: wrap;
+                `;
+
+                card.innerHTML = `
+                    <div style="flex: 1; min-width: 220px;">
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;">
+                            <strong style="color: #ffffff; font-size: 0.95rem;">${upd.title}</strong>
+                            <span style="background: ${isPub ? 'rgba(46, 204, 113, 0.15)' : 'rgba(255, 211, 42, 0.15)'}; color: ${isPub ? '#2ecc71' : '#ffd32a'}; font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 6px;">
+                                ${isPub ? '🟢 Avaldatud' : '🟡 Ootel (PAdminilt)'}
+                            </span>
+                        </div>
+                        <div style="font-size: 0.78rem; color: #8899a6; margin-bottom: 4px;">
+                            👤 Saatja: <strong style="color: #38bdf8;">${upd.author}</strong> · 📅 ${dateStr}
+                        </div>
+                        <div style="font-size: 0.84rem; color: #cbd5e1; line-height: 1.45; white-space: pre-wrap;">
+                            ${upd.description || 'Kirjeldus puudub.'}
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        ${!isPub ? `
+                            <button type="button" class="btn-owner-padmin-publish" data-id="${upd.id}" style="background: #2ecc71; border: none; color: #0b1118; border-radius: 6px; padding: 6px 14px; font-size: 0.8rem; font-weight: 900; cursor: pointer; box-shadow: 0 2px 8px rgba(46,204,113,0.3);">
+                                🚀 Avalda
+                            </button>
+                        ` : ''}
+                        <button type="button" class="btn-owner-padmin-delete" data-id="${upd.id}" style="background: rgba(255, 71, 87, 0.15); border: 1px solid rgba(255, 71, 87, 0.35); color: #ff6b81; border-radius: 6px; padding: 6px 10px; font-size: 0.78rem; font-weight: 700; cursor: pointer;" title="Kustuta see uuendus">
+                            🗑️
+                        </button>
+                    </div>
+                `;
+                padminIncomingList.appendChild(card);
+            });
+
+            // Bind publish / delete buttons for PAdmin updates
+            padminIncomingList.querySelectorAll('.btn-owner-padmin-publish').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const uid = (e.currentTarget as HTMLElement).getAttribute('data-id') || '';
+                    if (uid) {
+                        publishPlayardUpdate(uid);
+                        renderOwnerUpdatesView();
+                    }
+                });
+            });
+
+            padminIncomingList.querySelectorAll('.btn-owner-padmin-delete').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const uid = (e.currentTarget as HTMLElement).getAttribute('data-id') || '';
+                    if (uid && confirm('Kas soovid kindlasti selle PAdmini saadetud uuenduse kustutada?')) {
+                        deletePlayardUpdate(uid);
+                        renderOwnerUpdatesView();
+                    }
+                });
+            });
+        }
+    }
+
     // 2. Populate Project Select Dropdown
     if (projectSelect) {
         const currentVal = projectSelect.value;

@@ -16690,7 +16690,10 @@ await (async () => {
                 };
                 localStorage.setItem('playard_current_user_profile', JSON.stringify(padminProf));
                 window.dispatchEvent(new CustomEvent('playard_auth_changed', { detail: { profile: padminProf } }));
-                await new Promise(r => setTimeout(r, 400));
+                if (typeof window.applyPAdminModeIfNeeded === 'function') {
+                    await window.applyPAdminModeIfNeeded(padminProf);
+                }
+                await new Promise(r => setTimeout(r, 500));
 
                 const isPAdminMode = document.body.classList.contains('padmin-mode');
                 const logoutBtn = document.getElementById('btn-padmin-logout');
@@ -16736,14 +16739,46 @@ await (async () => {
                 const hasUpdatesCard = !!updatesCard;
                 const statsCardHiddenOnUpdates = !document.getElementById('padmin-stats-card');
 
+                // Test "Lisa Uuendus" form presence
+                const hasAddUpdateCard = !!document.getElementById('padmin-add-update-card');
+                const hasTitleInput = !!document.getElementById('padmin-update-title-input');
+                const hasDescInput = !!document.getElementById('padmin-update-desc-input');
+                const hasSendBtn = !!document.getElementById('btn-padmin-send-update');
+
+                // Fill form with typos: "lisa jõulu uptade ja teeme veatuks"
+                const titleInput = document.getElementById('padmin-update-title-input');
+                const descInput = document.getElementById('padmin-update-desc-input');
+                const sendBtn = document.getElementById('btn-padmin-send-update');
+                if (titleInput) titleInput.value = 'lisa jõulu uptade ja teeme veatuks';
+                if (descInput) descInput.value = 'kontrolli kas se nuuled ja crate games töötab';
+
+                // Click "Saada" -> check timeline overlay appears
+                sendBtn?.click();
+                await new Promise(r => setTimeout(r, 150));
+                const timelineOverlay = document.getElementById('padmin-timeline-overlay');
+                const hasTimelineOverlay = !!timelineOverlay;
+                const hasTimelineBar = !!timelineOverlay?.querySelector('#padmin-timeline-bar');
+
+                // Wait for timeline countdown to complete (~3s)
+                await new Promise(r => setTimeout(r, 3200));
+                const timelineClosed = !document.getElementById('padmin-timeline-overlay');
+
+                // Check that corrected update was saved
+                const updatesList = JSON.parse(localStorage.getItem('playard_owner_updates') || '[]');
+                const padminSubmitted = updatesList.find(u => u.author === 'PAdmin');
+                const isPolished = padminSubmitted && padminSubmitted.title.includes('Jõulu uuendus') && padminSubmitted.description.includes('see nooled');
+
                 // Switch back to Analytics Tab -> Shows #padmin-stats-card again
-                analyticsTabBtn?.click();
+                const analyticsTabBtnBack = document.querySelector('.padmin-tab-btn[data-tab="analytics"]');
+                analyticsTabBtnBack?.click();
                 await new Promise(r => setTimeout(r, 200));
                 const statsCardBack = !!document.getElementById('padmin-stats-card');
+                const logoutBtnStillPresent = !!document.getElementById('btn-padmin-logout');
 
                 return {
                     isPAdminMode,
                     hasLogoutBtn: !!logoutBtn,
+                    logoutBtnStillPresent,
                     hasStatsCard: !!statsCard,
                     hasAccountsCard: !!accountsCard,
                     hasGamesCard: !!gamesCard,
@@ -16752,6 +16787,14 @@ await (async () => {
                     hasUpdatesCard,
                     statsCardHiddenOnUpdates,
                     statsCardBack,
+                    hasAddUpdateCard,
+                    hasTitleInput,
+                    hasDescInput,
+                    hasSendBtn,
+                    hasTimelineOverlay,
+                    hasTimelineBar,
+                    timelineClosed,
+                    isPolished: !!isPolished,
                     filterBtns,
                     weekDots,
                     todayDots,
@@ -16761,8 +16804,8 @@ await (async () => {
                 };
             });
             console.log("   PAdmin Active State:", padminState);
-            if (!padminState.isPAdminMode || !padminState.hasLogoutBtn || !padminState.hasAccountsCard || !padminState.hasGamesCard || padminState.todayDots !== 1 || padminState.weekDots !== 7 || padminState.monthDots !== 30 || !padminState.tooltipVisible || !padminState.hasCategoryTabs || !padminState.hasUpdatesCard || !padminState.statsCardHiddenOnUpdates || !padminState.statsCardBack) {
-                throw new Error("PAdmin Special Mode activation failed: " + JSON.stringify(padminState));
+            if (!padminState.isPAdminMode || !padminState.hasLogoutBtn || !padminState.logoutBtnStillPresent || !padminState.hasAccountsCard || !padminState.hasGamesCard || padminState.todayDots !== 1 || padminState.weekDots !== 7 || padminState.monthDots !== 30 || !padminState.tooltipVisible || !padminState.hasCategoryTabs || !padminState.hasUpdatesCard || !padminState.statsCardHiddenOnUpdates || !padminState.statsCardBack || !padminState.hasAddUpdateCard || !padminState.hasTimelineOverlay || !padminState.timelineClosed || !padminState.isPolished) {
+                throw new Error("PAdmin Special Mode activation or Update Submission failed: " + JSON.stringify(padminState));
             }
 
             // C) Click logout button

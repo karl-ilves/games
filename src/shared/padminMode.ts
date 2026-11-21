@@ -20,7 +20,7 @@
 
 import { getCurrentUserProfile } from '../auth';
 import { supabase } from '../lib/supabase';
-import { getPlayardUpdates, getPlayardProjects, PlayardUpdateItem, PlayardProject } from './playardUpdatesService';
+import { getPlayardUpdates, getPlayardProjects, PlayardUpdateItem, PlayardProject, polishAndCorrectText, addPlayardUpdate } from './playardUpdatesService';
 
 const PADMIN_STYLE_ID = 'padmin-whiteout-style';
 const PADMIN_CONTAINER_ID = 'padmin-special-container';
@@ -597,6 +597,92 @@ function renderPAdminDashboard(
                     </div>
                 `}
             </div>
+
+            <!-- Lisa Uuendus (PAdmin -> Owner Panel Proposal Form) -->
+            <div id="padmin-add-update-card" style="
+                background: #f8fafc;
+                border: 2px solid #e2e8f0;
+                border-radius: 18px;
+                padding: 24px;
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+                position: relative;
+            ">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <div style="font-size: 1.15rem; font-weight: 900; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                            <span>✍️</span>
+                            <span>Lisa Uuendus</span>
+                        </div>
+                        <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
+                            Kirjuta uuenduse nimi ja kirjeldus. Saatmisel tehakse tekst automaatselt veatuks ja saadetakse Owneri paneeli!
+                        </div>
+                    </div>
+                    <span style="background: #e0e7ff; color: #4338ca; font-size: 0.75rem; font-weight: 800; padding: 4px 10px; border-radius: 9999px;">
+                        Automaatne õigekirja viimistlus ✨
+                    </span>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div>
+                        <label style="font-size: 0.8rem; font-weight: 800; color: #334155; display: block; margin-bottom: 6px;">Uuenduse nimi / pealkiri:</label>
+                        <input type="text" id="padmin-update-title-input" placeholder="nt Jõulu uuendus, uued autod ja sujuv mängimine..." style="
+                            width: 100%;
+                            box-sizing: border-box;
+                            padding: 12px 16px;
+                            border-radius: 12px;
+                            border: 1.5px solid #cbd5e1;
+                            background: #ffffff;
+                            color: #0f172a;
+                            font-size: 0.95rem;
+                            font-weight: 600;
+                            outline: none;
+                            transition: border-color 0.15s;
+                        ">
+                    </div>
+
+                    <div>
+                        <label style="font-size: 0.8rem; font-weight: 800; color: #334155; display: block; margin-bottom: 6px;">Uuenduse kirjeldus:</label>
+                        <textarea id="padmin-update-desc-input" placeholder="Kirjuta siia, mis uues versioonis lisandub või muutub..." rows="4" style="
+                            width: 100%;
+                            box-sizing: border-box;
+                            padding: 12px 16px;
+                            border-radius: 12px;
+                            border: 1.5px solid #cbd5e1;
+                            background: #ffffff;
+                            color: #0f172a;
+                            font-size: 0.9rem;
+                            line-height: 1.5;
+                            resize: vertical;
+                            outline: none;
+                            font-family: inherit;
+                        "></textarea>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 4px;">
+                        <span id="padmin-update-form-status" style="font-size: 0.85rem; font-weight: 700; color: #10b981; display: none;"></span>
+                        <button type="button" id="btn-padmin-send-update" style="
+                            padding: 12px 32px;
+                            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+                            color: #ffffff;
+                            border: none;
+                            border-radius: 12px;
+                            font-size: 0.95rem;
+                            font-weight: 800;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            gap: 8px;
+                            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+                            transition: transform 0.15s, box-shadow 0.15s;
+                        ">
+                            <span>🚀</span>
+                            <span>Saada</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     `;
 
@@ -772,6 +858,147 @@ function renderPAdminDashboard(
             group.addEventListener('mouseleave', hideTip as any);
         });
     }
+
+    // If on updates tab, attach Lisa Uuendus submission with timeline and auto-correction
+    if (currentTab === 'updates') {
+        const sendBtn = container.querySelector('#btn-padmin-send-update') as HTMLButtonElement | null;
+        const titleInput = container.querySelector('#padmin-update-title-input') as HTMLInputElement | null;
+        const descInput = container.querySelector('#padmin-update-desc-input') as HTMLTextAreaElement | null;
+        const statusEl = container.querySelector('#padmin-update-form-status') as HTMLElement | null;
+
+        sendBtn?.addEventListener('click', () => {
+            const rawTitle = titleInput?.value.trim() || '';
+            const rawDesc = descInput?.value.trim() || '';
+
+            if (!rawTitle) {
+                alert('Palun sisesta uuenduse pealkiri!');
+                titleInput?.focus();
+                return;
+            }
+
+            // Create or show centered progress timeline overlay
+            let overlay = document.getElementById('padmin-timeline-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'padmin-timeline-overlay';
+                document.body.appendChild(overlay);
+            }
+
+            overlay.style.cssText = `
+                position: fixed;
+                inset: 0;
+                background: rgba(15, 23, 42, 0.75);
+                backdrop-filter: blur(8px);
+                z-index: 2147483647;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            `;
+
+            overlay.innerHTML = `
+                <div style="
+                    background: #ffffff;
+                    border-radius: 20px;
+                    padding: 32px 36px;
+                    width: 440px;
+                    max-width: 90vw;
+                    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+                    text-align: center;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 18px;
+                    box-sizing: border-box;
+                ">
+                    <div style="font-size: 2.2rem; line-height: 1;">⏳</div>
+                    <div>
+                        <div style="font-size: 1.15rem; font-weight: 900; color: #0f172a;" id="padmin-timeline-status-text">
+                            Teeme teksti veatuks &amp; saadame...
+                        </div>
+                        <div style="font-size: 0.85rem; color: #64748b; margin-top: 4px;" id="padmin-timeline-subtext">
+                            Kontrollin grammatikat ja sünkroniseerin Owneri paneeliga
+                        </div>
+                    </div>
+
+                    <!-- Animated Timeline / Progress Bar -->
+                    <div style="
+                        width: 100%;
+                        background: #f1f5f9;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 9999px;
+                        height: 14px;
+                        overflow: hidden;
+                        position: relative;
+                    ">
+                        <div id="padmin-timeline-bar" style="
+                            width: 0%;
+                            height: 100%;
+                            background: linear-gradient(90deg, #2563eb, #38bdf8, #10b981);
+                            border-radius: 9999px;
+                            transition: width 0.05s linear;
+                        "></div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 700; color: #64748b;">
+                        <span id="padmin-timeline-percent">0%</span>
+                        <span id="padmin-timeline-countdown">Aega jäänud: 2.5s</span>
+                    </div>
+                </div>
+            `;
+
+            const totalDurationMs = 2500;
+            const startTime = Date.now();
+            const bar = overlay.querySelector('#padmin-timeline-bar') as HTMLElement;
+            const percentEl = overlay.querySelector('#padmin-timeline-percent') as HTMLElement;
+            const countdownEl = overlay.querySelector('#padmin-timeline-countdown') as HTMLElement;
+            const statusTextEl = overlay.querySelector('#padmin-timeline-status-text') as HTMLElement;
+
+            const interval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(1, elapsed / totalDurationMs);
+                const percent = Math.round(progress * 100);
+                const remainSec = Math.max(0, ((totalDurationMs - elapsed) / 1000)).toFixed(1);
+
+                if (bar) bar.style.width = `${percent}%`;
+                if (percentEl) percentEl.textContent = `${percent}%`;
+                if (countdownEl) countdownEl.textContent = `Aega jäänud: ${remainSec}s`;
+
+                if (progress >= 0.5 && statusTextEl) {
+                    statusTextEl.textContent = '✨ Viimistlen teksti ja salvestan Owneri paneeli...';
+                }
+
+                if (progress >= 1) {
+                    clearInterval(interval);
+
+                    // Perform text polishing and automatic error correction
+                    const polishedTitle = polishAndCorrectText(rawTitle);
+                    const polishedDesc = polishAndCorrectText(rawDesc);
+
+                    // Save as draft update authored by PAdmin
+                    addPlayardUpdate({
+                        projectId: 'global',
+                        projectTitle: 'PAdmin Proposal',
+                        title: polishedTitle,
+                        description: polishedDesc,
+                        version: 'v1.0',
+                        publishNow: false,
+                        author: 'PAdmin'
+                    });
+
+                    if (statusTextEl) {
+                        statusTextEl.textContent = '✅ Edukalt saadetud Owneri paneeli!';
+                        statusTextEl.style.color = '#10b981';
+                    }
+
+                    setTimeout(() => {
+                        if (overlay) overlay.remove();
+                        // Re-render dashboard updates tab
+                        renderPAdminDashboard(container, accountPoints, gamePoints, period, 'updates');
+                    }, 500);
+                }
+            }, 50);
+        });
+    }
 }
 
 export async function applyPAdminModeIfNeeded(profile?: { username?: string | null; email?: string | null } | null): Promise<void> {
@@ -833,8 +1060,10 @@ export async function applyPAdminModeIfNeeded(profile?: { username?: string | nu
         const games = await fetchGamesData();
         const accPoints = buildDailyPoints(accounts, activePeriod);
         const gamePoints = buildDailyPoints(games, activePeriod);
-        renderPAdminDashboard(containerEl, accPoints, gamePoints, activePeriod);
+        renderPAdminDashboard(containerEl, accPoints, gamePoints, activePeriod, activePAdminTab);
     } else {
+        activePAdminTab = 'analytics';
+        activePeriod = 'week';
         document.documentElement.classList.remove('padmin-mode');
         document.body.classList.remove('padmin-mode');
         if (styleEl) styleEl.remove();
@@ -842,4 +1071,8 @@ export async function applyPAdminModeIfNeeded(profile?: { username?: string | nu
         const tip = document.getElementById(PADMIN_TOOLTIP_ID);
         if (tip) tip.remove();
     }
+}
+
+if (typeof window !== 'undefined') {
+    (window as any).applyPAdminModeIfNeeded = applyPAdminModeIfNeeded;
 }
