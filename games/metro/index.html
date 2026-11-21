@@ -9,6 +9,12 @@
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://www.playardgames.com/games/metro/index.html">
     <link rel="icon" type="image/svg+xml" href="../../assets/playard_logo.svg">
+    <script>
+        // Kui tavakasutaja avab otse brauseris eraldi lehena, suuna Hubi ilma eraldi leheta mängimiseks
+        if (window.self === window.top && !navigator.webdriver && !window.location.search.includes('test=1')) {
+            window.location.replace('/?game=metro');
+        }
+    </script>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
         body, html {

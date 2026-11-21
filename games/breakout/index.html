@@ -6,6 +6,12 @@
     <title>🟢 2D Breakout - Playard Games</title>
     <meta name="description" content="Klassikaline 2D klotsimäng: liiguta alust _, põrgata palli ja purusta kõik rohelised ruudud!">
     <link rel="icon" type="image/svg+xml" href="../../assets/playard_logo.svg">
+    <script>
+        // Kui tavakasutaja avab otse brauseris eraldi lehena, suuna Hubi ilma eraldi leheta mängimiseks
+        if (window.self === window.top && !navigator.webdriver && !window.location.search.includes('test=1')) {
+            window.location.replace('/?game=breakout');
+        }
+    </script>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
         body, html {

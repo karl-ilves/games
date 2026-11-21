@@ -1141,6 +1141,22 @@ export function setupGamePreviewModal() {
 
     fetchCloudGameStats();
 
+    // Check URL parameters on hub load (e.g. ?game=breakout or ?game=metro or ?game=snake)
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameParam = urlParams.get('game');
+        if (gameParam) {
+            const g = OFFICIAL_GAMES_CATALOG[gameParam] || {
+                id: gameParam,
+                title: gameParam.toUpperCase(),
+                url: `./games/${gameParam}/index.html`
+            };
+            setTimeout(() => {
+                launchInHubGameContainer(g.url, g.title);
+            }, 300);
+        }
+    } catch (e) {}
+
     if (typeof window !== 'undefined') {
         (window as any).gamePreviewModal = {
             openGamePreviewModal,
