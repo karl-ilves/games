@@ -213,10 +213,10 @@ export function applyLocalization() {
     }
 
     // Community section
-    const commH2 = document.querySelector('#btn-hub-create-game')?.previousElementSibling?.querySelector('h2');
+    const commH2 = document.getElementById('community-games-header-title');
     if (commH2) commH2.innerHTML = isEt ? '<span>🌐</span> Kogukonna loodud mängud' : '<span>🌐</span> Community Created Games';
 
-    const commP = document.querySelector('#btn-hub-create-game')?.previousElementSibling?.querySelector('p');
+    const commP = document.getElementById('community-games-header-desc');
     if (commP) commP.textContent = isEt
         ? 'Mängi mängijate loodud ja administraatori poolt heaks kiidetud 3D mänge!'
         : 'Play 3D worlds created by players and approved by admins!';
