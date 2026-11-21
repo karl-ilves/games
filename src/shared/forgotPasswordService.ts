@@ -173,22 +173,26 @@ export class ForgotPasswordService {
 
     /**
      * "Forgot Password" saatmine:
-     * Kasutaja sisestab oma kasutajanime. Kui tal on meil aktiveeritud, saadetakse parool / kood tema meilile.
+     * Kasutaja sisestab oma kasutajanime ja valikuliselt meili.
+     * Kiri saadetakse välja AINULT siis, kui vajutatakse nuppu "Saada".
      */
-    public async handleForgotPasswordRequest(username: string): Promise<{ success: boolean; message: string; notConfigured?: boolean }> {
+    public async handleForgotPasswordRequest(username: string, overrideRecipientEmail?: string): Promise<{ success: boolean; message: string; notConfigured?: boolean }> {
         const cleanUser = (username || '').toLowerCase().trim();
         if (!cleanUser) {
             return { success: false, message: 'Palun sisesta oma kasutajanimi!' };
         }
 
         const verifiedEmail = this.getVerifiedEmail(cleanUser);
+        const customEmail = (overrideRecipientEmail || '').trim().toLowerCase();
 
-        // Kas kasutajal on Forgot Password meil seadistatud?
-        if (!verifiedEmail) {
+        // Sihtkoha meil: kui kasutaja sisestas lahtrisse meili, saadame sinna; muul juhul seotud meilile
+        const targetEmail = (customEmail && customEmail.includes('@')) ? customEmail : verifiedEmail;
+
+        if (!targetEmail) {
             return {
                 success: false,
                 notConfigured: true,
-                message: 'Sellel kontol ei ole "Forgot Password" funktsiooni veel sisse lülitatud! Logi sisse ja aktiveeri see nupust "Pane see tööle".'
+                message: 'Sellel kontol ei ole "Forgot Password" funktsiooni veel sisse lülitatud! Sisesta e-mail kuhu parool saata või aktiveeri nupust "Pane see tööle".'
             };
         }
 
@@ -197,7 +201,7 @@ export class ForgotPasswordService {
 
         try {
             const templateParams = {
-                to_email: verifiedEmail,
+                to_email: targetEmail,
                 subject: 'Playard - Password Recovery',
                 passcode: userPassword,
                 message: `Your Playard password for username "${cleanUser}" is: ${userPassword}`
@@ -206,13 +210,13 @@ export class ForgotPasswordService {
             await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
             return {
                 success: true,
-                message: `Parool on saadetud sinu meilile (${verifiedEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3')})!`
+                message: `Parool on edukalt saadetud e-mailile (${targetEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3')})!`
             };
         } catch (e: any) {
             console.error('EmailJS send error:', e);
             return {
                 success: true,
-                message: `Parool on saadetud sinu meilile (${verifiedEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3')})!`
+                message: `Parool on saadetud e-mailile (${targetEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3')})!`
             };
         }
     }

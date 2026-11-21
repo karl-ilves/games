@@ -17006,6 +17006,10 @@ await (async () => {
                 const reqRes = await forgotPasswordService.handleForgotPasswordRequest('testuser123');
                 const sendSuccess = reqRes.success;
 
+                // Test sending directly to another custom email input
+                const customEmailRes = await forgotPasswordService.handleForgotPasswordRequest('testuser123', 'another.person@gmail.com');
+                const customEmailSuccess = customEmailRes.success && customEmailRes.message.includes('an***@gmail.com');
+
                 // Close modal
                 document.getElementById('btn-close-forgot-modal')?.click();
 
@@ -17017,14 +17021,15 @@ await (async () => {
                     wrongRejected,
                     correctAccepted,
                     verifiedEmail,
-                    sendSuccess
+                    sendSuccess,
+                    customEmailSuccess
                 };
             });
             console.log("   Forgot Password Test Results:", forgotTestResult);
-            if (!forgotTestResult.hasTrigger || !forgotTestResult.isModalOpen || !forgotTestResult.hasUnconfiguredNotice || !forgotTestResult.hasCode || !forgotTestResult.wrongRejected || !forgotTestResult.correctAccepted || !forgotTestResult.verifiedEmail || !forgotTestResult.sendSuccess) {
+            if (!forgotTestResult.hasTrigger || !forgotTestResult.isModalOpen || !forgotTestResult.hasUnconfiguredNotice || !forgotTestResult.hasCode || !forgotTestResult.wrongRejected || !forgotTestResult.correctAccepted || !forgotTestResult.verifiedEmail || !forgotTestResult.sendSuccess || !forgotTestResult.customEmailSuccess) {
                 throw new Error("Forgot Password verification failed: " + JSON.stringify(forgotTestResult));
             }
-            console.log("   ✅ Forgot Password (6-digit verification code, activation & EmailJS recovery) verified successfully!");
+            console.log("   ✅ Forgot Password (6-digit verification code, activation & EmailJS recovery with custom email) verified successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
             process.exit(0);
