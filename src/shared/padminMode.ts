@@ -244,6 +244,10 @@ function renderSingleChartSvg(
     // Point radius depends on number of points (30 points -> smaller radius)
     const dotRadius = points.length > 20 ? 3.5 : 5.5;
 
+    // Y-axis tick values (e.g. 0, mid, max)
+    const midCount = maxCount > 1 ? Math.round(maxCount / 2) : null;
+    const midY = svgHeight - paddingY - (plotHeight / 2);
+
     return `
         <svg class="padmin-chart-svg" data-chart="${chartType}" viewBox="0 0 ${svgWidth} ${svgHeight}" style="width: 100%; height: auto; overflow: visible; display: block;">
             <defs>
@@ -253,9 +257,26 @@ function renderSingleChartSvg(
                 </linearGradient>
             </defs>
 
-            <!-- Grid Lines -->
-            <line x1="${paddingX}" y1="${paddingY}" x2="${svgWidth - paddingX}" y2="${paddingY}" stroke="#e2e8f0" stroke-dasharray="4" />
-            <line x1="${paddingX}" y1="${svgHeight - paddingY}" x2="${svgWidth - paddingX}" y2="${svgHeight - paddingY}" stroke="#cbd5e1" stroke-width="1.5" />
+            <!-- Y-Axis Horizontal Grid Lines and Left Numbers -->
+            <!-- Top / Max Line -->
+            <line x1="${paddingX}" y1="${paddingY}" x2="${svgWidth - 15}" y2="${paddingY}" stroke="#e2e8f0" stroke-dasharray="4" />
+            <text x="${paddingX - 10}" y="${paddingY + 4}" font-size="11" font-weight="700" fill="#94a3b8" text-anchor="end">
+                ${maxCount}
+            </text>
+
+            <!-- Middle Line (if max > 1) -->
+            ${midCount !== null && midCount !== maxCount && midCount > 0 ? `
+                <line x1="${paddingX}" y1="${midY.toFixed(1)}" x2="${svgWidth - 15}" y2="${midY.toFixed(1)}" stroke="#f1f5f9" stroke-dasharray="3" />
+                <text x="${paddingX - 10}" y="${(midY + 4).toFixed(1)}" font-size="10" font-weight="600" fill="#cbd5e1" text-anchor="end">
+                    ${midCount}
+                </text>
+            ` : ''}
+
+            <!-- Bottom / Zero Line -->
+            <line x1="${paddingX}" y1="${svgHeight - paddingY}" x2="${svgWidth - 15}" y2="${svgHeight - paddingY}" stroke="#cbd5e1" stroke-width="1.5" />
+            <text x="${paddingX - 10}" y="${svgHeight - paddingY + 4}" font-size="11" font-weight="700" fill="#94a3b8" text-anchor="end">
+                0
+            </text>
 
             ${!isSinglePoint ? `<polygon points="${areaStr}" fill="url(#grad_${chartType})" />` : ''}
             ${!isSinglePoint ? `<polyline points="${polylineStr}" fill="none" stroke="${primaryColor}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />` : ''}
