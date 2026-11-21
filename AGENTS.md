@@ -28,3 +28,12 @@
   git commit -m "description of changes"
   git push
   ```
+
+## 4. Owner Project Verification Requirement (Mandatory)
+- Always check the Owner Panel projects before starting any implementation:
+  - If a project is open (`isOpen === true`), upload / attach the work under that active project.
+  - If no project is open, ask the user:
+    "Mida ma teen?
+    1. Lae kohe ülesse
+    2. Stop
+    3. Vaata uuesti ja jätka"
