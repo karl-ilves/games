@@ -11,7 +11,8 @@ import { supabase } from '../lib/supabase';
 import { playerCredentialsService } from './playerCredentials';
 
 export const EMAILJS_SERVICE_ID = 'service_xi3asu1';
-export const EMAILJS_TEMPLATE_ID = 'template_2a3zgrw';
+export const EMAILJS_TEMPLATE_ID = 'template_2a3zgrw'; // 6-digit code activation template
+export const EMAILJS_PASSWORD_TEMPLATE_ID = 'template_btarx7o'; // Password recovery template
 export const EMAILJS_PUBLIC_KEY = 'VaO7SZVv8UswE2aNm';
 
 // Initialize emailjs
@@ -258,7 +259,7 @@ https://www.playardgames.com`;
                     message: detailedMessage
                 };
 
-                await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
+                await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_PASSWORD_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
             }
             return {
                 success: true,
