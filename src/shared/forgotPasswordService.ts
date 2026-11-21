@@ -199,29 +199,76 @@ https://www.playardgames.com`;
     }
 
     /**
-     * "Forgot Password" saatmine:
-     * Kasutaja sisestab oma kasutajanime ja valikuliselt meili.
-     * Kiri saadetakse välja AINULT siis, kui vajutatakse nuppu "Saada".
+     * Kontrollib kas konto on süsteemis üldse olemas
      */
-    public async handleForgotPasswordRequest(username: string, overrideRecipientEmail?: string): Promise<{ success: boolean; message: string; notConfigured?: boolean }> {
+    public isAccountExisting(username: string): boolean {
+        const cleanUser = (username || '').toLowerCase().trim();
+        if (!cleanUser) return false;
+
+        // Kontrolli local profiles
+        try {
+            const raw = localStorage.getItem('playard_user_profiles');
+            if (raw) {
+                const list = JSON.parse(raw);
+                if (Array.isArray(list) && list.some(p => (p.username || '').toLowerCase() === cleanUser)) {
+                    return true;
+                }
+            }
+        } catch (e) {}
+
+        // Kontrolli teadaolevaid paroole
+        try {
+            const raw = localStorage.getItem('playard_known_player_passwords');
+            if (raw) {
+                const map = JSON.parse(raw);
+                if (map && map[cleanUser]) return true;
+            }
+        } catch (e) {}
+
+        // Kontrolli kinnitatud e-maile
+        try {
+            const raw = localStorage.getItem('playard_user_verified_emails');
+            if (raw) {
+                const map = JSON.parse(raw);
+                if (map && map[cleanUser]) return true;
+            }
+        } catch (e) {}
+
+        return false;
+    }
+
+    /**
+     * "Forgot Password" saatmine:
+     * Kasutaja sisestab AINULT oma kasutajanime.
+     * - Kui kontot pole olemas: 'no account'
+     * - Kui konto on olemas, aga pole aktiveeritud: 'unavailable'
+     * - Parooli lehel ei näidata (saadetakse ainult meilile).
+     */
+    public async handleForgotPasswordRequest(username: string): Promise<{ success: boolean; message: string; notConfigured?: boolean; noAccount?: boolean }> {
         const cleanUser = (username || '').toLowerCase().trim();
         if (!cleanUser) {
-            return { success: false, message: 'Palun sisesta oma kasutajanimi!' };
+            return { success: false, message: 'Please enter your username!' };
+        }
+
+        const accountExists = this.isAccountExisting(cleanUser);
+        if (!accountExists) {
+            return {
+                success: false,
+                noAccount: true,
+                message: 'no account'
+            };
         }
 
         const verifiedEmail = this.getVerifiedEmail(cleanUser);
-        const customEmail = (overrideRecipientEmail || '').trim().toLowerCase();
-
-        // Sihtkoha meil: kui kasutaja sisestas lahtrisse meili, saadame sinna; muul juhul seotud meilile
-        const targetEmail = (customEmail && customEmail.includes('@')) ? customEmail : verifiedEmail;
-
-        if (!targetEmail) {
+        if (!verifiedEmail) {
             return {
                 success: false,
                 notConfigured: true,
-                message: 'Sellel kontol ei ole "Forgot Password" funktsiooni veel sisse lülitatud! Sisesta e-mail kuhu parool saata või aktiveeri nupust "Pane see tööle".'
+                message: 'unavailable'
             };
         }
+
+        const targetEmail = verifiedEmail;
 
         // Leia kasutaja parool
         const userPassword = playerCredentialsService.getPassword(cleanUser) || 'Kontrolli oma kontot';

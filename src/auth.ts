@@ -1650,7 +1650,6 @@ export async function initAuth() {
     const modalForgot = document.getElementById('modal-forgot-password');
     const btnCloseForgot = document.getElementById('btn-close-forgot-modal');
     const forgotUsernameInput = document.getElementById('forgot-username-input') as HTMLInputElement | null;
-    const forgotEmailInput = document.getElementById('forgot-email-input') as HTMLInputElement | null;
     const btnForgotSend = document.getElementById('btn-forgot-send');
     const forgotModalMsg = document.getElementById('forgot-modal-msg');
 
@@ -1675,9 +1674,6 @@ export async function initAuth() {
             forgotUsernameInput.value = usernameInput?.value || '';
             forgotUsernameInput.focus();
         }
-        if (forgotEmailInput) {
-            forgotEmailInput.value = '';
-        }
     }
 
     function closeForgotModal() {
@@ -1689,7 +1685,6 @@ export async function initAuth() {
 
     btnForgotSend?.addEventListener('click', async () => {
         const u = forgotUsernameInput?.value.trim() || '';
-        const em = forgotEmailInput?.value.trim() || '';
 
         if (!u) {
             if (forgotModalMsg) {
@@ -1704,7 +1699,7 @@ export async function initAuth() {
             forgotModalMsg.textContent = 'Kontrollin ja saadan meili...';
         }
 
-        const res = await forgotPasswordService.handleForgotPasswordRequest(u, em);
+        const res = await forgotPasswordService.handleForgotPasswordRequest(u);
         if (forgotModalMsg) {
             forgotModalMsg.style.color = res.success ? '#2ecc71' : '#e74c3c';
             forgotModalMsg.textContent = res.message;

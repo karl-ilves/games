@@ -16981,12 +16981,26 @@ await (async () => {
                 await new Promise(r => setTimeout(r, 100));
                 const isModalOpen = modalForgot?.style.display === 'flex';
 
-                // Test sending for non-configured user
-                if (forgotUserInput) forgotUserInput.value = 'unconfigured_user_xyz';
+                // Test sending for non-existing user -> "no account"
+                if (forgotUserInput) forgotUserInput.value = 'non_existing_user_99999';
                 btnForgotSend?.click();
                 await new Promise(r => setTimeout(r, 200));
-                const unconfiguredMsg = forgotModalMsg?.textContent || '';
-                const hasUnconfiguredNotice = unconfiguredMsg.includes('ei ole "Forgot Password"') || unconfiguredMsg.includes('aktiveeri');
+                const noAccountMsg = forgotModalMsg?.textContent || '';
+                const hasNoAccountNotice = noAccountMsg.toLowerCase().includes('no account');
+
+                // Test sending for existing user without activated email -> "unavailable"
+                // Store a mock user into profiles
+                try {
+                    const existingList = JSON.parse(localStorage.getItem('playard_user_profiles') || '[]');
+                    existingList.push({ username: 'existing_inactive_user', email: 'fake@fake.com' });
+                    localStorage.setItem('playard_user_profiles', JSON.stringify(existingList));
+                } catch(e) {}
+
+                if (forgotUserInput) forgotUserInput.value = 'existing_inactive_user';
+                btnForgotSend?.click();
+                await new Promise(r => setTimeout(r, 200));
+                const unavailableMsg = forgotModalMsg?.textContent || '';
+                const hasUnavailableNotice = unavailableMsg.toLowerCase().includes('unavailable') || unavailableMsg.toLowerCase().includes('unavable');
 
                 // Test Activation via code
                 const forgotPasswordService = window.forgotPasswordService;
@@ -17002,13 +17016,9 @@ await (async () => {
                 const correctAccepted = correctRes.success;
                 const verifiedEmail = forgotPasswordService.getVerifiedEmail('testuser123');
 
-                // Test Forgot Password request with verified user
+                // Test Forgot Password request with verified user -> sends email
                 const reqRes = await forgotPasswordService.handleForgotPasswordRequest('testuser123');
                 const sendSuccess = reqRes.success;
-
-                // Test sending directly to another custom email input (kasutab @example.com domeeni, et test ei kulutaks e-maili limiiti)
-                const customEmailRes = await forgotPasswordService.handleForgotPasswordRequest('testuser123', 'test.recipient@example.com');
-                const customEmailSuccess = customEmailRes.success && customEmailRes.message.includes('te***@example.com');
 
                 // Close modal
                 document.getElementById('btn-close-forgot-modal')?.click();
@@ -17016,20 +17026,20 @@ await (async () => {
                 return {
                     hasTrigger,
                     isModalOpen,
-                    hasUnconfiguredNotice,
+                    hasNoAccountNotice,
+                    hasUnavailableNotice,
                     hasCode,
                     wrongRejected,
                     correctAccepted,
                     verifiedEmail,
-                    sendSuccess,
-                    customEmailSuccess
+                    sendSuccess
                 };
             });
             console.log("   Forgot Password Test Results:", forgotTestResult);
-            if (!forgotTestResult.hasTrigger || !forgotTestResult.isModalOpen || !forgotTestResult.hasUnconfiguredNotice || !forgotTestResult.hasCode || !forgotTestResult.wrongRejected || !forgotTestResult.correctAccepted || !forgotTestResult.verifiedEmail || !forgotTestResult.sendSuccess || !forgotTestResult.customEmailSuccess) {
+            if (!forgotTestResult.hasTrigger || !forgotTestResult.isModalOpen || !forgotTestResult.hasNoAccountNotice || !forgotTestResult.hasUnavailableNotice || !forgotTestResult.hasCode || !forgotTestResult.wrongRejected || !forgotTestResult.correctAccepted || !forgotTestResult.verifiedEmail || !forgotTestResult.sendSuccess) {
                 throw new Error("Forgot Password verification failed: " + JSON.stringify(forgotTestResult));
             }
-            console.log("   ✅ Forgot Password (6-digit verification code, activation & EmailJS recovery with custom email) verified successfully!");
+            console.log("   ✅ Forgot Password (no account & unavailable checks, 6-digit activation & recovery) verified successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
             process.exit(0);
