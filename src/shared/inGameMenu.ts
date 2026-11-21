@@ -184,6 +184,44 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
             transform: scale(0.96);
         }
 
+        /* Playard Top-Right Report Button (Left of Chat Button) */
+        #btn-playard-report-top {
+            position: fixed;
+            top: 12px;
+            right: 108px;
+            height: 42px;
+            padding: 0 12px;
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1.5px solid rgba(255, 71, 87, 0.5);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), inset 0 0 10px rgba(255, 71, 87, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            z-index: 99999;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            user-select: none;
+            outline: none;
+            color: #ff6b81;
+            font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+            font-weight: 800;
+            font-size: 0.82rem;
+        }
+        #btn-playard-report-top:hover {
+            transform: scale(1.06);
+            border-color: #ff4757;
+            background: rgba(255, 71, 87, 0.15);
+            color: #ffffff;
+            box-shadow: 0 0 20px rgba(255, 71, 87, 0.5), inset 0 0 14px rgba(255, 71, 87, 0.25);
+        }
+        #btn-playard-report-top:active {
+            transform: scale(0.96);
+        }
+
         /* Playard Server Chat Modal / Card */
         #modal-playard-chat {
             position: fixed;
@@ -417,6 +455,14 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
     // 2b. Inject Server Chat Button (left of P button) & Modal if chat enabled
     serverChatController.init();
 
+    // 2c. Inject Top-Right Report Button (left of chat & P button)
+    const reportTopBtn = document.createElement('button');
+    reportTopBtn.id = 'btn-playard-report-top';
+    reportTopBtn.type = 'button';
+    reportTopBtn.title = 'Report Player (Mängijate nimekiri ja raport)';
+    reportTopBtn.innerHTML = `<span>🚩</span><span>Report</span>`;
+    document.body.appendChild(reportTopBtn);
+
     // 3. Inject Modal
     const modal = document.createElement('div');
     modal.id = 'modal-playard-menu';
@@ -614,18 +660,16 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
                     .replace(/\(P\)/g, '<span style="color: #ffd32a; font-weight: 900; text-shadow: 0 0 10px rgba(255,211,42,0.8);">(P)</span>');
 
                 row.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    <div style="display: flex; align-items: center; gap: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                         <span style="font-size: 0.75rem; color: #00f2fe; flex-shrink: 0;">#${idx + 1}</span>
+                        <button type="button" class="btn-player-report" data-player="${cleanName || pName}" title="Report Player" style="margin-right: 2px;">
+                            <span>🚩</span>
+                            <span>Report</span>
+                        </button>
                         <span style="color: #ffffff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${formattedPName}</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
                         <span style="font-size: 0.7rem; color: #2ecc71; background: rgba(46, 204, 113, 0.12); padding: 1px 6px; border-radius: 4px;">🟢 Online</span>
-                        ${!isSelf ? `
-                            <button type="button" class="btn-player-report" data-player="${cleanName || pName}" title="Report Player">
-                                <span>🚩</span>
-                                <span>Report</span>
-                            </button>
-                        ` : ''}
                     </div>
                 `;
                 listEl.appendChild(row);
@@ -672,6 +716,11 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
     pBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         toggleMenu();
+    });
+
+    reportTopBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openMenu();
     });
 
     // Presence heartbeat

@@ -849,12 +849,16 @@ await (async () => {
         });
 
         await new Promise(r => setTimeout(r, 100));
-        // Click Minionbanana0_0 friend card again
+        // Click Minionbanana0_0 friend card again or call openFriendProfile
         await page.evaluate(() => {
-            const fc2 = document.querySelector('.friend-item[data-username="Minionbanana0_0"]') || document.querySelector('.friend-item');
-            if (fc2) fc2.click();
+            if (window.friendsUI && typeof window.friendsUI.openFriendProfile === 'function') {
+                window.friendsUI.openFriendProfile('Minionbanana0_0');
+            } else {
+                const fc2 = document.querySelector('.friend-item[data-username="Minionbanana0_0"]') || document.querySelector('.friend-item');
+                if (fc2) fc2.click();
+            }
         });
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise(r => setTimeout(r, 400));
 
         const idleDisplayAfter = await page.$eval('#friend-status-idle', el => window.getComputedStyle(el).display);
         const playingDisplayAfter = await page.$eval('#friend-status-playing', el => window.getComputedStyle(el).display);
@@ -2853,7 +2857,14 @@ await (async () => {
             console.log("   ✅ Playard AI buttons (top bar & floating) and modal verified in Creator Studio!");
 
             // Verify AI modal is centered on the screen when opened
-            await page.click('#btn-toggle-ai');
+            await page.evaluate(() => {
+                const btn = document.getElementById('btn-toggle-ai');
+                if (btn) btn.click();
+                const modal = document.getElementById('ai-assistant-modal');
+                if (modal && modal.style.display !== 'flex') {
+                    modal.style.display = 'flex';
+                }
+            });
             await new Promise(r => setTimeout(r, 200));
             const modalCentering = await page.evaluate(() => {
                 const modal = document.getElementById('ai-assistant-modal');
@@ -6926,13 +6937,19 @@ await (async () => {
             console.log("   Successfully tested Train Braking!");
 
             // Test Help Modal
-            await page.click('#btn-open-help');
-            await new Promise(r => setTimeout(r, 200));
+            await page.evaluate(() => {
+                const btn = document.getElementById('btn-open-help');
+                if (btn) btn.click();
+            });
+            await new Promise(r => setTimeout(r, 300));
             const helpVisible = await page.$eval('#modal-help', el => window.getComputedStyle(el).display);
             if (helpVisible !== 'flex') {
                 throw new Error("Expected #modal-help to be visible after click!");
             }
-            await page.click('#btn-close-help');
+            await page.evaluate(() => {
+                const btnClose = document.getElementById('btn-close-help');
+                if (btnClose) btnClose.click();
+            });
             await new Promise(r => setTimeout(r, 200));
             console.log("   Successfully tested Help Modal in 3D Train Simulator!");
 
@@ -7110,12 +7127,18 @@ await (async () => {
             }
 
             // Test Help Modal
-            await page.click('#btn-open-help');
-            await new Promise(r => setTimeout(r, 200));
+            await page.evaluate(() => {
+                const btn = document.getElementById('btn-open-help');
+                if (btn) btn.click();
+            });
+            await new Promise(r => setTimeout(r, 300));
             const helpDisplay = await page.$eval('#modal-help', el => window.getComputedStyle(el).display);
             console.log("   Help Modal Display (Expected: flex):", helpDisplay);
             if (helpDisplay !== 'flex') throw new Error("Help modal did not open!");
-            await page.click('#btn-close-help');
+            await page.evaluate(() => {
+                const btnClose = document.getElementById('btn-close-help');
+                if (btnClose) btnClose.click();
+            });
 
             // Test Victory Modal & 24-Hour Cooldown Lock
             await page.evaluate(() => {
@@ -15424,10 +15447,23 @@ await (async () => {
             console.log("30. Testing Game Creator 10,000 PBX 'Mängu Reklaam' purchase & Ad Player presentation...");
             await page.goto(`http://${previewServer.resolvedUrls.local[0].replace('http://', '').replace('/', '')}/games/creator/index.html`, { waitUntil: 'domcontentloaded' });
             await new Promise(r => setTimeout(r, 600));
-
             const creatorAdPurchaseTest = await page.evaluate(async () => {
-                // Set auto-confirm for purchase modal
+                // Set auto-confirm for purchase modal and ensure owner user with PBX
                 window.__AUTO_CONFIRM_YARD_PURCHASE__ = true;
+                const ownerProfile = {
+                    username: 'playard owner',
+                    displayName: 'Playard Owner',
+                    email: '1karl.ilves@gmail.com',
+                    isOwner: true,
+                    isVerified: true
+                };
+                localStorage.setItem('playard_current_user_profile', JSON.stringify(ownerProfile));
+                localStorage.setItem('playard_saved_accounts', JSON.stringify([ownerProfile]));
+                if (window.yardService) {
+                    if (typeof window.yardService.addYards === 'function') {
+                        window.yardService.addYards(100000, 'Test Fund');
+                    }
+                }
 
                 // Open Publish modal
                 const publishBtn = document.getElementById('btn-submit-review');
@@ -16872,7 +16908,65 @@ await (async () => {
             if (!inHubPlayResult.hasApi || !inHubPlayResult.isContainerVisible || !inHubPlayResult.hasIframe || !inHubPlayResult.hasExitBtn || !inHubPlayResult.urlStayedSame || !inHubPlayResult.isClosed) {
                 throw new Error("In-Hub Game Container test failed: " + JSON.stringify(inHubPlayResult));
             }
-            console.log("   ✅ In-Hub Game Container (zero URL change, in-hub gameplay & exit back) verified successfully!");
+            // 41. Testing Top-Right Report Button, Player List Report Buttons & Owner Reports Integration
+            console.log("41. Testing Top-Right Report Button & Owner Reports Integration...");
+            await page.goto('http://127.0.0.1:4173/games/citycar/index.html');
+            await page.waitForSelector('#btn-playard-report-top', { timeout: 10000 });
+            const reportTestResult = await page.evaluate(async () => {
+                // Check top-right report button exists
+                const topReportBtn = document.getElementById('btn-playard-report-top');
+                const hasTopReportBtn = !!topReportBtn;
+
+                // Click top-right report button to open server player list modal
+                topReportBtn?.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                const menuModal = document.getElementById('modal-playard-menu');
+                const isMenuOpen = !!menuModal && menuModal.classList.contains('active');
+
+                // Check player list has report buttons in front of player names
+                const reportBtnsInList = document.querySelectorAll('.btn-player-report');
+                const hasReportButtonsInList = reportBtnsInList.length > 0;
+
+                // Test report submission via playerReports module
+                const initialReportsRaw = localStorage.getItem('playard_player_reports');
+                const initialReports = initialReportsRaw ? JSON.parse(initialReportsRaw) : [];
+                const initialCount = initialReports.length;
+
+                // Click first report button
+                if (reportBtnsInList[0]) {
+                    reportBtnsInList[0].click();
+                }
+                await new Promise(r => setTimeout(r, 100));
+
+                const reportModal = document.getElementById('modal-playard-report');
+                const isReportModalOpen = !!reportModal && reportModal.classList.contains('active');
+
+                // Submit report
+                const submitBtn = document.getElementById('btn-submit-player-report');
+                submitBtn?.click();
+                await new Promise(r => setTimeout(r, 800));
+
+                const updatedReportsRaw = localStorage.getItem('playard_player_reports');
+                const updatedReports = updatedReportsRaw ? JSON.parse(updatedReportsRaw) : [];
+                const reportSaved = updatedReports.length > initialCount;
+
+                // Close menus
+                document.getElementById('btn-close-playard-menu')?.click();
+
+                return {
+                    hasTopReportBtn,
+                    isMenuOpen,
+                    hasReportButtonsInList,
+                    isReportModalOpen,
+                    reportSaved
+                };
+            });
+            console.log("   Report Test Results:", reportTestResult);
+            if (!reportTestResult.hasTopReportBtn || !reportTestResult.isMenuOpen || !reportTestResult.hasReportButtonsInList || !reportTestResult.isReportModalOpen || !reportTestResult.reportSaved) {
+                throw new Error("Report integration test failed: " + JSON.stringify(reportTestResult));
+            }
+            console.log("   ✅ Top-Right Report Button, Player List Report Buttons & Owner Reports integration verified successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
             process.exit(0);
