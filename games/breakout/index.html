@@ -7,9 +7,9 @@
     <meta name="description" content="Klassikaline 2D klotsimäng: liiguta alust _, põrgata palli ja purusta kõik rohelised ruudud!">
     <link rel="icon" type="image/svg+xml" href="../../assets/playard_logo.svg">
     <script>
-        // Kui tavakasutaja avab otse brauseris eraldi lehena, suuna Hubi ilma eraldi leheta mängimiseks
+        // Kui tavakasutaja avab otse brauseris eraldi lehena, suuna kohe Hubi
         if (window.self === window.top && !navigator.webdriver && !window.location.search.includes('test=1')) {
-            window.location.replace('/?game=breakout');
+            window.location.replace('/');
         }
     </script>
     <style>

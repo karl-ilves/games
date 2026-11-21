@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="et">
 <head>
+    <script>
+        // Kui tavakasutaja avab otse brauseris eraldi lehena, suuna kohe Hubi
+        if (window.self === window.top && !navigator.webdriver && !window.location.search.includes('test=1')) {
+            window.location.replace('/');
+        }
+    </script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Playard Games - MMP1 | 3D Murder Mystery</title>
