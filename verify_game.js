@@ -17006,9 +17006,9 @@ await (async () => {
                 const reqRes = await forgotPasswordService.handleForgotPasswordRequest('testuser123');
                 const sendSuccess = reqRes.success;
 
-                // Test sending directly to another custom email input
-                const customEmailRes = await forgotPasswordService.handleForgotPasswordRequest('testuser123', 'another.person@gmail.com');
-                const customEmailSuccess = customEmailRes.success && customEmailRes.message.includes('an***@gmail.com');
+                // Test sending directly to another custom email input (kasutab @example.com domeeni, et test ei kulutaks e-maili limiiti)
+                const customEmailRes = await forgotPasswordService.handleForgotPasswordRequest('testuser123', 'test.recipient@example.com');
+                const customEmailSuccess = customEmailRes.success && customEmailRes.message.includes('te***@example.com');
 
                 // Close modal
                 document.getElementById('btn-close-forgot-modal')?.click();

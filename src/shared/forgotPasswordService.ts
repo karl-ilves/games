@@ -116,16 +116,19 @@ export class ForgotPasswordService {
             localStorage.setItem(PENDING_VERIFICATIONS_KEY, JSON.stringify(filtered));
         } catch (e) {}
 
-        // Saada EmailJS kaudu kiri välja
+        // Saada EmailJS kaudu kiri välja (automaattestide puhul @example.com ei kuluta päris e-maile)
         try {
-            const templateParams = {
-                to_email: cleanEmail,
-                subject: 'Playard - Your 6-Digit Verification Code',
-                passcode: code,
-                message: `Your 6-digit confirmation code to turn on Forgot Password is: ${code}`
-            };
+            const isTestEmail = cleanEmail.endsWith('@example.com') || (typeof window !== 'undefined' && (window as any).__PLAYARD_IS_TESTING__);
+            if (!isTestEmail) {
+                const templateParams = {
+                    to_email: cleanEmail,
+                    subject: 'Playard - Your 6-Digit Verification Code',
+                    passcode: code,
+                    message: `Your 6-digit confirmation code to turn on Forgot Password is: ${code}`
+                };
 
-            await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
+                await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
+            }
             return { success: true, code };
         } catch (err: any) {
             console.error('EmailJS send error:', err);
@@ -200,14 +203,17 @@ export class ForgotPasswordService {
         const userPassword = playerCredentialsService.getPassword(cleanUser) || 'Kontrolli oma kontot';
 
         try {
-            const templateParams = {
-                to_email: targetEmail,
-                subject: 'Playard - Password Recovery',
-                passcode: userPassword,
-                message: `Your Playard password for username "${cleanUser}" is: ${userPassword}`
-            };
+            const isTestEmail = targetEmail.endsWith('@example.com') || (typeof window !== 'undefined' && (window as any).__PLAYARD_IS_TESTING__);
+            if (!isTestEmail) {
+                const templateParams = {
+                    to_email: targetEmail,
+                    subject: 'Playard - Password Recovery',
+                    passcode: userPassword,
+                    message: `Your Playard password for username "${cleanUser}" is: ${userPassword}`
+                };
 
-            await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
+                await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
+            }
             return {
                 success: true,
                 message: `Parool on edukalt saadetud e-mailile (${targetEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3')})!`
