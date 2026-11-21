@@ -20,6 +20,7 @@
 
 import { getCurrentUserProfile } from '../auth';
 import { supabase } from '../lib/supabase';
+import { getPlayardUpdates, getPlayardProjects, PlayardUpdateItem, PlayardProject } from './playardUpdatesService';
 
 const PADMIN_STYLE_ID = 'padmin-whiteout-style';
 const PADMIN_CONTAINER_ID = 'padmin-special-container';
@@ -32,6 +33,7 @@ export function isPAdminUser(usernameOrEmail?: string | null): boolean {
 }
 
 export type FilterPeriod = 'today' | 'week' | 'month';
+export type PAdminTab = 'analytics' | 'updates';
 
 export interface ProfileRecord {
     createdAt: string;
@@ -55,6 +57,7 @@ export interface ChartDayPoint {
 let cachedProfiles: ProfileRecord[] | null = null;
 let cachedGames: GameRecord[] | null = null;
 let activePeriod: FilterPeriod = 'week'; // Default to week (7 viimast päeva)
+let activePAdminTab: PAdminTab = 'analytics'; // Default to Analüütika
 
 async function fetchAccountsData(): Promise<ProfileRecord[]> {
     if (cachedProfiles) return cachedProfiles;
@@ -309,7 +312,13 @@ function renderSingleChartSvg(
     `;
 }
 
-function renderPAdminDashboard(container: HTMLElement, accountPoints: ChartDayPoint[], gamePoints: ChartDayPoint[], period: FilterPeriod) {
+function renderPAdminDashboard(
+    container: HTMLElement,
+    accountPoints: ChartDayPoint[],
+    gamePoints: ChartDayPoint[],
+    period: FilterPeriod,
+    currentTab: PAdminTab = activePAdminTab
+) {
     const totalAccounts = accountPoints.reduce((sum, p) => sum + p.count, 0);
     const totalGames = gamePoints.reduce((sum, p) => sum + p.count, 0);
 
@@ -319,37 +328,14 @@ function renderPAdminDashboard(container: HTMLElement, accountPoints: ChartDayPo
         month: '30 viimast päeva (30 punkti)'
     };
 
-    const html = `
-        <!-- Top Centered Logout Button -->
-        <div style="
-            position: fixed;
-            top: 24px;
-            left: 0;
-            right: 0;
-            display: flex;
-            justify-content: center;
-            z-index: 2147483647;
-            pointer-events: none;
-        ">
-            <button id="btn-padmin-logout" style="
-                pointer-events: auto;
-                padding: 12px 34px;
-                background: #111827;
-                color: #ffffff;
-                border: 2px solid #000000;
-                border-radius: 9999px;
-                cursor: pointer;
-                font-weight: 800;
-                font-size: 1rem;
-                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-                transition: transform 0.15s, background-color 0.15s;
-                font-family: inherit;
-            ">
-                Log Out
-            </button>
-        </div>
+    // Owner panel updates data
+    const allUpdates = getPlayardUpdates();
+    const allProjects = getPlayardProjects();
+    const publishedUpdates = allUpdates.filter(u => u.status === 'published');
+    const futureUpdates = allUpdates.filter(u => u.status === 'draft'); // Tulevased / Staging uuendused
 
-        <!-- Center Container -->
+    // Analytics Card HTML
+    const analyticsContentHtml = `
         <div id="padmin-stats-card" style="
             width: 1060px;
             max-width: calc(100vw - 32px);
@@ -481,6 +467,199 @@ function renderPAdminDashboard(container: HTMLElement, accountPoints: ChartDayPo
         </div>
     `;
 
+    // Updates Card HTML
+    const renderUpdateItemHtml = (u: PlayardUpdateItem, isDraft: boolean) => {
+        const d = new Date(u.publishedAt || u.createdAt);
+        const dateStr = `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        return `
+            <div class="padmin-update-row" style="
+                background: #f8fafc;
+                border: 1px solid ${isDraft ? '#fed7aa' : '#e2e8f0'};
+                border-left: 4px solid ${isDraft ? '#f97316' : '#10b981'};
+                border-radius: 14px;
+                padding: 16px 20px;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                transition: transform 0.15s, box-shadow 0.15s;
+            ">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-weight: 900; font-size: 1.05rem; color: #0f172a;">${u.title}</span>
+                        ${u.version ? `<span style="background: #e2e8f0; color: #475569; font-size: 0.75rem; font-weight: 800; padding: 2px 8px; border-radius: 6px;">${u.version}</span>` : ''}
+                        <span style="background: ${isDraft ? '#ffedd5' : '#d1fae5'}; color: ${isDraft ? '#c2410c' : '#047857'}; font-size: 0.74rem; font-weight: 800; padding: 2px 10px; border-radius: 9999px;">
+                            ${isDraft ? '⏳ Tulevane (Staging)' : '🚀 Avaldatud'}
+                        </span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: #64748b; font-weight: 600;">
+                        📅 ${dateStr} · 👤 ${u.author || 'Playard Owner'}
+                    </div>
+                </div>
+                <div style="font-size: 0.9rem; color: #334155; line-height: 1.5; white-space: pre-wrap;">
+                    ${u.description || 'Kirjeldus puudub.'}
+                </div>
+                ${u.projectTitle ? `
+                    <div style="font-size: 0.78rem; color: #64748b; display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+                        <span>📦 Projekt:</span>
+                        <strong style="color: #0f172a;">${u.projectTitle}</strong>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    };
+
+    const updatesContentHtml = `
+        <div id="padmin-updates-card" style="
+            width: 1060px;
+            max-width: calc(100vw - 32px);
+            background: #ffffff;
+            border: 2px solid #e2e8f0;
+            border-radius: 24px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
+            padding: 28px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 22px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #0f172a;
+        ">
+            <!-- Header -->
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; border-bottom: 1px solid #f1f5f9; padding-bottom: 18px;">
+                <div>
+                    <h1 style="margin: 0; font-size: 1.4rem; font-weight: 900; letter-spacing: -0.4px; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                        <span>🚀</span>
+                        <span>Playard Uuendused (Updates)</span>
+                    </h1>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 3px;">
+                        Kõik reaalajas Playard Owneri paneelis loodud ja avaldatud uuendused
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-size: 0.82rem; font-weight: 800; padding: 6px 14px; border-radius: 9999px;">
+                        ${publishedUpdates.length} avaldatud
+                    </div>
+                    <div style="background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; font-size: 0.82rem; font-weight: 800; padding: 6px 14px; border-radius: 9999px;">
+                        ${futureUpdates.length} tulevast
+                    </div>
+                </div>
+            </div>
+
+            <!-- Praegused (Avaldatud) uuendused -->
+            <div>
+                <div style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                    <span>✨</span>
+                    <span>Praegused uuendused (${publishedUpdates.length})</span>
+                </div>
+                ${publishedUpdates.length === 0 ? `
+                    <div style="background: #f8fafc; border: 2px dashed #e2e8f0; border-radius: 14px; padding: 24px; text-align: center; color: #64748b; font-size: 0.9rem;">
+                        Ühtegi avaldatud uuendust pole veel lisatud.
+                    </div>
+                ` : `
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        ${publishedUpdates.map(u => renderUpdateItemHtml(u, false)).join('')}
+                    </div>
+                `}
+            </div>
+
+            <!-- Tulevased uuendused (Staging / plaanis) -->
+            <div>
+                <div style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                    <span>🔮</span>
+                    <span>Tulevased uuendused (${futureUpdates.length})</span>
+                </div>
+                ${futureUpdates.length === 0 ? `
+                    <div style="background: #f8fafc; border: 2px dashed #e2e8f0; border-radius: 14px; padding: 24px; text-align: center; color: #64748b; font-size: 0.9rem;">
+                        Praegu tulevasi uuendusi ei ole (kõik uuendused ilmuvad otse Playard Owneri paneelist).
+                    </div>
+                ` : `
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        ${futureUpdates.map(u => renderUpdateItemHtml(u, true)).join('')}
+                    </div>
+                `}
+            </div>
+        </div>
+    `;
+
+    const html = `
+        <!-- Top Header Bar with Logout and Categories (Analüütika, Updates) to the right -->
+        <div style="
+            position: fixed;
+            top: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            z-index: 2147483647;
+            pointer-events: none;
+            padding: 0 16px;
+            box-sizing: border-box;
+        ">
+            <!-- Log Out Button -->
+            <button id="btn-padmin-logout" style="
+                pointer-events: auto;
+                padding: 10px 28px;
+                background: #111827;
+                color: #ffffff;
+                border: 2px solid #000000;
+                border-radius: 9999px;
+                cursor: pointer;
+                font-weight: 800;
+                font-size: 0.95rem;
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+                transition: transform 0.15s, background-color 0.15s;
+                font-family: inherit;
+            ">
+                Log Out
+            </button>
+
+            <!-- Categories Tabs: 1) Analüütika, 2) Updates -->
+            <div id="padmin-category-tabs" style="
+                pointer-events: auto;
+                display: inline-flex;
+                background: #f1f5f9;
+                padding: 4px;
+                border-radius: 9999px;
+                border: 1px solid #cbd5e1;
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+                gap: 4px;
+            ">
+                <button class="padmin-tab-btn" data-tab="analytics" style="
+                    padding: 8px 22px;
+                    border: none;
+                    border-radius: 9999px;
+                    cursor: pointer;
+                    font-size: 0.9rem;
+                    font-weight: 800;
+                    transition: all 0.15s;
+                    background: ${currentTab === 'analytics' ? '#111827' : 'transparent'};
+                    color: ${currentTab === 'analytics' ? '#ffffff' : '#64748b'};
+                    box-shadow: ${currentTab === 'analytics' ? '0 2px 8px rgba(0,0,0,0.15)' : 'none'};
+                ">📊 Analüütika</button>
+                <button class="padmin-tab-btn" data-tab="updates" style="
+                    padding: 8px 22px;
+                    border: none;
+                    border-radius: 9999px;
+                    cursor: pointer;
+                    font-size: 0.9rem;
+                    font-weight: 800;
+                    transition: all 0.15s;
+                    background: ${currentTab === 'updates' ? '#111827' : 'transparent'};
+                    color: ${currentTab === 'updates' ? '#ffffff' : '#64748b'};
+                    box-shadow: ${currentTab === 'updates' ? '0 2px 8px rgba(0,0,0,0.15)' : 'none'};
+                ">🚀 Updates</button>
+            </div>
+        </div>
+
+        <!-- Center View Content (Analytics vs Updates) -->
+        <div id="padmin-view-wrapper" style="width: 100%; display: flex; justify-content: center;">
+            ${currentTab === 'analytics' ? analyticsContentHtml : updatesContentHtml}
+        </div>
+    `;
+
     container.innerHTML = html;
 
     // Attach logout button
@@ -495,72 +674,86 @@ function renderPAdminDashboard(container: HTMLElement, accountPoints: ChartDayPo
         }
     });
 
-    // Attach filter buttons
-    const filterBtns = container.querySelectorAll('.padmin-filter-btn');
-    filterBtns.forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const p = btn.getAttribute('data-period') as FilterPeriod;
-            if (p && p !== activePeriod) {
-                activePeriod = p;
-                const accounts = await fetchAccountsData();
-                const games = await fetchGamesData();
-                const accPts = buildDailyPoints(accounts, activePeriod);
-                const gamePts = buildDailyPoints(games, activePeriod);
-                renderPAdminDashboard(container, accPts, gamePts, activePeriod);
+    // Attach category tabs (Analüütika vs Updates)
+    const tabBtns = container.querySelectorAll('.padmin-tab-btn');
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetTab = btn.getAttribute('data-tab') as PAdminTab;
+            if (targetTab && targetTab !== activePAdminTab) {
+                activePAdminTab = targetTab;
+                renderPAdminDashboard(container, accountPoints, gamePoints, period, activePAdminTab);
             }
         });
     });
 
-    // Tooltip logic for mouseover
-    const tooltip = getOrCreateTooltip();
-    const dotGroups = container.querySelectorAll('.padmin-chart-dot-group');
-
-    dotGroups.forEach(group => {
-        const showTip = (e: MouseEvent) => {
-            const chart = group.getAttribute('data-chart');
-            const label = group.getAttribute('data-label') || '';
-            const count = group.getAttribute('data-count') || '0';
-            const boys = group.getAttribute('data-boys') || '0';
-            const girls = group.getAttribute('data-girls') || '0';
-            const other = group.getAttribute('data-other') || '0';
-
-            if (chart === 'accounts') {
-                let genderLine = `👦 Poisid: <strong>${boys}</strong> &nbsp;|&nbsp; 👧 Tüdrukud: <strong>${girls}</strong>`;
-                if (parseInt(other, 10) > 0) {
-                    genderLine += ` &nbsp;|&nbsp; ❓ Määramata: <strong>${other}</strong>`;
+    // If on analytics tab, attach filter buttons and chart tooltip logic
+    if (currentTab === 'analytics') {
+        const filterBtns = container.querySelectorAll('.padmin-filter-btn');
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const p = btn.getAttribute('data-period') as FilterPeriod;
+                if (p && p !== activePeriod) {
+                    activePeriod = p;
+                    const accounts = await fetchAccountsData();
+                    const games = await fetchGamesData();
+                    const accPts = buildDailyPoints(accounts, activePeriod);
+                    const gamePts = buildDailyPoints(games, activePeriod);
+                    renderPAdminDashboard(container, accPts, gamePts, activePeriod, activePAdminTab);
                 }
-                tooltip.innerHTML = `
-                    <div style="font-weight: 800; font-size: 0.85rem; margin-bottom: 4px; color: #93c5fd;">📅 ${label}</div>
-                    <div style="font-size: 0.82rem; margin-bottom: 3px;">👤 Tehtud kontosid: <strong style="color: #ffffff; font-size: 0.95rem;">${count}</strong></div>
-                    <div style="font-size: 0.76rem; color: #cbd5e1;">${genderLine}</div>
-                `;
-            } else {
-                tooltip.innerHTML = `
-                    <div style="font-weight: 800; font-size: 0.85rem; margin-bottom: 4px; color: #f472b6;">📅 ${label}</div>
-                    <div style="font-size: 0.82rem;">🎮 Tehtud mänge: <strong style="color: #ffffff; font-size: 0.95rem;">${count}</strong></div>
-                `;
-            }
+            });
+        });
 
-            tooltip.style.left = `${e.clientX}px`;
-            tooltip.style.top = `${e.clientY - 10}px`;
-            tooltip.style.display = 'block';
-            tooltip.style.opacity = '1';
-        };
+        // Tooltip logic for mouseover
+        const tooltip = getOrCreateTooltip();
+        const dotGroups = container.querySelectorAll('.padmin-chart-dot-group');
 
-        const moveTip = (e: MouseEvent) => {
-            tooltip.style.left = `${e.clientX}px`;
-            tooltip.style.top = `${e.clientY - 10}px`;
-        };
+        dotGroups.forEach(group => {
+            const showTip = (e: MouseEvent) => {
+                const chart = group.getAttribute('data-chart');
+                const label = group.getAttribute('data-label') || '';
+                const count = group.getAttribute('data-count') || '0';
+                const boys = group.getAttribute('data-boys') || '0';
+                const girls = group.getAttribute('data-girls') || '0';
+                const other = group.getAttribute('data-other') || '0';
 
-        const hideTip = () => {
-            tooltip.style.display = 'none';
-            tooltip.style.opacity = '0';
-        };
+                if (chart === 'accounts') {
+                    let genderLine = `👦 Poisid: <strong>${boys}</strong> &nbsp;|&nbsp; 👧 Tüdrukud: <strong>${girls}</strong>`;
+                    if (parseInt(other, 10) > 0) {
+                        genderLine += ` &nbsp;|&nbsp; ❓ Määramata: <strong>${other}</strong>`;
+                    }
+                    tooltip.innerHTML = `
+                        <div style="font-weight: 800; font-size: 0.85rem; margin-bottom: 4px; color: #93c5fd;">📅 ${label}</div>
+                        <div style="font-size: 0.82rem; margin-bottom: 3px;">👤 Tehtud kontosid: <strong style="color: #ffffff; font-size: 0.95rem;">${count}</strong></div>
+                        <div style="font-size: 0.76rem; color: #cbd5e1;">${genderLine}</div>
+                    `;
+                } else {
+                    tooltip.innerHTML = `
+                        <div style="font-weight: 800; font-size: 0.85rem; margin-bottom: 4px; color: #f472b6;">📅 ${label}</div>
+                        <div style="font-size: 0.82rem;">🎮 Tehtud mänge: <strong style="color: #ffffff; font-size: 0.95rem;">${count}</strong></div>
+                    `;
+                }
 
-        group.addEventListener('mouseenter', showTip as any);
-        group.addEventListener('mousemove', moveTip as any);
-        group.addEventListener('mouseleave', hideTip as any);
-    });
+                tooltip.style.left = `${e.clientX}px`;
+                tooltip.style.top = `${e.clientY - 10}px`;
+                tooltip.style.display = 'block';
+                tooltip.style.opacity = '1';
+            };
+
+            const moveTip = (e: MouseEvent) => {
+                tooltip.style.left = `${e.clientX}px`;
+                tooltip.style.top = `${e.clientY - 10}px`;
+            };
+
+            const hideTip = () => {
+                tooltip.style.display = 'none';
+                tooltip.style.opacity = '0';
+            };
+
+            group.addEventListener('mouseenter', showTip as any);
+            group.addEventListener('mousemove', moveTip as any);
+            group.addEventListener('mouseleave', hideTip as any);
+        });
+    }
 }
 
 export async function applyPAdminModeIfNeeded(profile?: { username?: string | null; email?: string | null } | null): Promise<void> {

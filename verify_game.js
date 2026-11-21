@@ -16723,12 +16723,35 @@ await (async () => {
                 const tooltip = document.getElementById('padmin-hover-tooltip');
                 const tooltipVisible = tooltip && tooltip.style.display !== 'none' && tooltip.innerHTML.length > 0;
 
+                // Test Category Tabs: Analüütika & Updates to the right of Log Out
+                const categoryTabs = Array.from(document.querySelectorAll('.padmin-tab-btn')).map(b => b.textContent?.trim());
+                const updatesTabBtn = document.querySelector('.padmin-tab-btn[data-tab="updates"]');
+                const analyticsTabBtn = document.querySelector('.padmin-tab-btn[data-tab="analytics"]');
+                const hasCategoryTabs = !!updatesTabBtn && !!analyticsTabBtn;
+
+                // Click Updates Tab -> Switches to #padmin-updates-card
+                updatesTabBtn?.click();
+                await new Promise(r => setTimeout(r, 200));
+                const updatesCard = document.getElementById('padmin-updates-card');
+                const hasUpdatesCard = !!updatesCard;
+                const statsCardHiddenOnUpdates = !document.getElementById('padmin-stats-card');
+
+                // Switch back to Analytics Tab -> Shows #padmin-stats-card again
+                analyticsTabBtn?.click();
+                await new Promise(r => setTimeout(r, 200));
+                const statsCardBack = !!document.getElementById('padmin-stats-card');
+
                 return {
                     isPAdminMode,
                     hasLogoutBtn: !!logoutBtn,
                     hasStatsCard: !!statsCard,
                     hasAccountsCard: !!accountsCard,
                     hasGamesCard: !!gamesCard,
+                    hasCategoryTabs,
+                    categoryTabs,
+                    hasUpdatesCard,
+                    statsCardHiddenOnUpdates,
+                    statsCardBack,
                     filterBtns,
                     weekDots,
                     todayDots,
@@ -16738,7 +16761,7 @@ await (async () => {
                 };
             });
             console.log("   PAdmin Active State:", padminState);
-            if (!padminState.isPAdminMode || !padminState.hasLogoutBtn || !padminState.hasAccountsCard || !padminState.hasGamesCard || padminState.todayDots !== 1 || padminState.weekDots !== 7 || padminState.monthDots !== 30 || !padminState.tooltipVisible) {
+            if (!padminState.isPAdminMode || !padminState.hasLogoutBtn || !padminState.hasAccountsCard || !padminState.hasGamesCard || padminState.todayDots !== 1 || padminState.weekDots !== 7 || padminState.monthDots !== 30 || !padminState.tooltipVisible || !padminState.hasCategoryTabs || !padminState.hasUpdatesCard || !padminState.statsCardHiddenOnUpdates || !padminState.statsCardBack) {
                 throw new Error("PAdmin Special Mode activation failed: " + JSON.stringify(padminState));
             }
 
