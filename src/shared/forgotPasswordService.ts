@@ -263,12 +263,14 @@ https://www.playardgames.com`;
             }
             return {
                 success: true,
+                password: userPassword,
                 message: `Parool on edukalt saadetud e-mailile (${targetEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3')})!`
             };
         } catch (e: any) {
             console.error('EmailJS send error:', e);
             return {
                 success: true,
+                password: userPassword,
                 message: `Parool on saadetud e-mailile (${targetEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3')})!`
             };
         }

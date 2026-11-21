@@ -1687,7 +1687,14 @@ export async function initAuth() {
     btnTriggerForgot?.addEventListener('click', openForgotModal);
     btnCloseForgot?.addEventListener('click', closeForgotModal);
 
+    let forgotCountdownTimer: any = null;
+
     btnForgotSend?.addEventListener('click', async () => {
+        if (forgotCountdownTimer) {
+            clearInterval(forgotCountdownTimer);
+            forgotCountdownTimer = null;
+        }
+
         const u = forgotUsernameInput?.value.trim() || '';
         const em = forgotEmailInput?.value.trim() || '';
 
@@ -1706,8 +1713,44 @@ export async function initAuth() {
 
         const res = await forgotPasswordService.handleForgotPasswordRequest(u, em);
         if (forgotModalMsg) {
-            forgotModalMsg.style.color = res.success ? '#2ecc71' : '#e74c3c';
-            forgotModalMsg.textContent = res.message;
+            if (res.success && res.password) {
+                const rawPwd = res.password;
+                let secondsLeft = 15;
+
+                const renderPasswordBox = (pwdText: string, sec: number, isMasked: boolean) => {
+                    const timerBadge = !isMasked 
+                        ? `<span style="display: inline-block; background: #e74c3c; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 800; animation: pulse 1s infinite;">⏱️ Nähtav veel: ${sec}s</span>`
+                        : `<span style="display: inline-block; background: #576574; color: #c8d6e5; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 800;">🔒 Aeg täis – parool peidetud</span>`;
+
+                    forgotModalMsg.innerHTML = `
+                        <div style="background: rgba(11, 232, 129, 0.1); border: 1.5px solid #2ecc71; border-radius: 10px; padding: 12px; margin-top: 6px;">
+                            <div style="color: #2ecc71; font-weight: bold; margin-bottom: 8px;">${res.message}</div>
+                            <div style="background: #131920; border: 1px dashed ${isMasked ? '#718093' : '#f1c40f'}; border-radius: 8px; padding: 10px; margin-bottom: 8px;">
+                                <div style="font-size: 0.78rem; color: #a4b0be; margin-bottom: 4px;">Konto "${u}" parool:</div>
+                                <div id="forgot-revealed-pwd" style="font-size: 1.35rem; font-weight: 900; letter-spacing: 3px; font-family: monospace; color: ${isMasked ? '#718093' : '#f1c40f'};">${pwdText}</div>
+                            </div>
+                            ${timerBadge}
+                        </div>
+                    `;
+                };
+
+                renderPasswordBox(rawPwd, secondsLeft, false);
+
+                forgotCountdownTimer = setInterval(() => {
+                    secondsLeft--;
+                    if (secondsLeft > 0) {
+                        renderPasswordBox(rawPwd, secondsLeft, false);
+                    } else {
+                        clearInterval(forgotCountdownTimer);
+                        forgotCountdownTimer = null;
+                        const asterisks = '*'.repeat(Math.max(6, rawPwd.length));
+                        renderPasswordBox(asterisks, 0, true);
+                    }
+                }, 1000);
+            } else {
+                forgotModalMsg.style.color = res.success ? '#2ecc71' : '#e74c3c';
+                forgotModalMsg.textContent = res.message;
+            }
         }
     });
 
