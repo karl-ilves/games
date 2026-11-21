@@ -2,6 +2,7 @@ import { supabase } from './lib/supabase';
 import { yardService } from './shared/yardService';
 import { playerCredentialsService } from './shared/playerCredentials';
 import { playerGeoService } from './shared/playerGeoService';
+import { forgotPasswordService } from './shared/forgotPasswordService';
 
 const hasSupabase = !!supabase;
 
@@ -729,6 +730,21 @@ export function updateAuthDisplay(profile: UserProfile | null) {
             (window as any).__updateGameAgeRestrictions();
         }
         applyPAdminModeIfNeeded(profile);
+
+        // Update Forgot Password Status UI under Logout
+        const enableBtn = document.getElementById('btn-enable-forgot-pwd');
+        const statusTag = document.getElementById('forgot-pwd-status-tag');
+        const verifiedEmail = forgotPasswordService.getVerifiedEmail(profile.username);
+        if (verifiedEmail) {
+            if (enableBtn) enableBtn.style.display = 'none';
+            if (statusTag) {
+                statusTag.style.display = 'block';
+                statusTag.textContent = `✅ Forgot Password aktiivne (${verifiedEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3')})!`;
+            }
+        } else {
+            if (enableBtn) enableBtn.style.display = 'flex';
+            if (statusTag) statusTag.style.display = 'none';
+        }
     } else {
         if (loginForm) loginForm.style.display = 'block';
         if (userInfo) userInfo.style.display = 'none';
@@ -1601,6 +1617,11 @@ export async function initAuth() {
                 if (ageCalcPreview) ageCalcPreview.textContent = '';
                 updateAuthDisplay(profile);
                 if (usernameInput) usernameInput.value = '';
+
+                // Kasutaja registreerimisel küsi, kas ta soovib Forgot Passwordi käivitada:
+                setTimeout(() => {
+                    openActivationModal(profile.username);
+                }, 800);
             }
         });
     }
@@ -1623,6 +1644,159 @@ export async function initAuth() {
             updateAuthDisplay(null);
         });
     }
+
+    // ── 5. FORGOT PASSWORD & ACTIVATION HANDLERS ──────────────────────────────
+    const btnTriggerForgot = document.getElementById('btn-trigger-forgot-password');
+    const modalForgot = document.getElementById('modal-forgot-password');
+    const btnCloseForgot = document.getElementById('btn-close-forgot-modal');
+    const forgotUsernameInput = document.getElementById('forgot-username-input') as HTMLInputElement | null;
+    const btnForgotSend = document.getElementById('btn-forgot-send');
+    const forgotModalMsg = document.getElementById('forgot-modal-msg');
+
+    const modalActivate = document.getElementById('modal-activate-forgot');
+    const btnCloseActivate = document.getElementById('btn-close-activate-modal');
+    const btnEnableForgotPwd = document.getElementById('btn-enable-forgot-pwd');
+    const activateEmailInput = document.getElementById('activate-email-input') as HTMLInputElement | null;
+    const btnActivateSendCode = document.getElementById('btn-activate-send-code');
+    const activateStep1 = document.getElementById('activate-step-1');
+    const activateStep2 = document.getElementById('activate-step-2');
+    const activateCodeInput = document.getElementById('activate-code-input') as HTMLInputElement | null;
+    const btnActivateConfirmCode = document.getElementById('btn-activate-confirm-code');
+    const activateModalMsg = document.getElementById('activate-modal-msg');
+
+    let currentActivationUsername = '';
+
+    function openForgotModal() {
+        if (!modalForgot) return;
+        modalForgot.style.display = 'flex';
+        if (forgotModalMsg) { forgotModalMsg.textContent = ''; forgotModalMsg.style.color = '#fff'; }
+        if (forgotUsernameInput) {
+            forgotUsernameInput.value = usernameInput?.value || '';
+            forgotUsernameInput.focus();
+        }
+    }
+
+    function closeForgotModal() {
+        if (modalForgot) modalForgot.style.display = 'none';
+    }
+
+    btnTriggerForgot?.addEventListener('click', openForgotModal);
+    btnCloseForgot?.addEventListener('click', closeForgotModal);
+
+    btnForgotSend?.addEventListener('click', async () => {
+        const u = forgotUsernameInput?.value.trim() || '';
+        if (!u) {
+            if (forgotModalMsg) {
+                forgotModalMsg.style.color = '#e74c3c';
+                forgotModalMsg.textContent = 'Palun sisesta oma kasutajanimi!';
+            }
+            return;
+        }
+
+        if (forgotModalMsg) {
+            forgotModalMsg.style.color = '#00f2fe';
+            forgotModalMsg.textContent = 'Kontrollin ja saadan meili...';
+        }
+
+        const res = await forgotPasswordService.handleForgotPasswordRequest(u);
+        if (forgotModalMsg) {
+            forgotModalMsg.style.color = res.success ? '#2ecc71' : '#e74c3c';
+            forgotModalMsg.textContent = res.message;
+        }
+    });
+
+    // Activation Modal (Käivitamine registreerimisel või Logout all nupust "Pane see tööle")
+    function openActivationModal(username: string) {
+        currentActivationUsername = username;
+        if (!modalActivate) return;
+        modalActivate.style.display = 'flex';
+        if (activateStep1) activateStep1.style.display = 'block';
+        if (activateStep2) activateStep2.style.display = 'none';
+        if (activateModalMsg) { activateModalMsg.textContent = ''; activateModalMsg.style.color = '#fff'; }
+        if (activateEmailInput) {
+            activateEmailInput.value = '';
+            activateEmailInput.focus();
+        }
+    }
+
+    function closeActivationModal() {
+        if (modalActivate) modalActivate.style.display = 'none';
+    }
+
+    btnEnableForgotPwd?.addEventListener('click', () => {
+        const prof = getCurrentUserProfile();
+        if (prof?.username) {
+            openActivationModal(prof.username);
+        } else {
+            showMsg('Palun logi enne sisse!', 'error');
+        }
+    });
+
+    btnCloseActivate?.addEventListener('click', closeActivationModal);
+
+    btnActivateSendCode?.addEventListener('click', async () => {
+        const em = activateEmailInput?.value.trim() || '';
+        if (!em || !em.includes('@') || !em.includes('.')) {
+            if (activateModalMsg) {
+                activateModalMsg.style.color = '#e74c3c';
+                activateModalMsg.textContent = 'Palun sisesta kehtiv e-maili aadress!';
+            }
+            return;
+        }
+
+        if (activateModalMsg) {
+            activateModalMsg.style.color = '#f1c40f';
+            activateModalMsg.textContent = 'Saadan 6-kohalise koodi meilile...';
+        }
+
+        const res = await forgotPasswordService.sendActivationCode(currentActivationUsername, em);
+        if (res.success) {
+            if (activateStep1) activateStep1.style.display = 'none';
+            if (activateStep2) activateStep2.style.display = 'block';
+            if (activateModalMsg) {
+                activateModalMsg.style.color = '#2ecc71';
+                activateModalMsg.textContent = 'Kood saadetud! Kontrolli oma e-posti.';
+            }
+            if (activateCodeInput) {
+                activateCodeInput.value = '';
+                activateCodeInput.focus();
+            }
+        } else {
+            if (activateModalMsg) {
+                activateModalMsg.style.color = '#e74c3c';
+                activateModalMsg.textContent = res.error || 'Viga koodi saatmisel.';
+            }
+        }
+    });
+
+    btnActivateConfirmCode?.addEventListener('click', () => {
+        const code = activateCodeInput?.value.trim() || '';
+        if (!code || code.length !== 6) {
+            if (activateModalMsg) {
+                activateModalMsg.style.color = '#e74c3c';
+                activateModalMsg.textContent = 'Palun sisesta täpselt 6-kohaline number!';
+            }
+            return;
+        }
+
+        const res = forgotPasswordService.verifyActivationCode(currentActivationUsername, code);
+        if (res.success) {
+            if (activateModalMsg) {
+                activateModalMsg.style.color = '#2ecc71';
+                activateModalMsg.textContent = '🎉 Õnnestus! Forgot Password on edukalt aktiveeritud!';
+            }
+            setTimeout(() => {
+                closeActivationModal();
+                const prof = getCurrentUserProfile();
+                if (prof) updateAuthDisplay(prof);
+            }, 1200);
+        } else {
+            if (activateModalMsg) {
+                activateModalMsg.style.color = '#e74c3c';
+                activateModalMsg.textContent = res.error || 'Vale kood!';
+            }
+        }
+    });
 
 }
 

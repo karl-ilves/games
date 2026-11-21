@@ -16966,7 +16966,65 @@ await (async () => {
             if (!reportTestResult.hasTopReportBtn || !reportTestResult.isMenuOpen || !reportTestResult.hasReportButtonsInList || !reportTestResult.isReportModalOpen || !reportTestResult.reportSaved) {
                 throw new Error("Report integration test failed: " + JSON.stringify(reportTestResult));
             }
-            console.log("   ✅ Top-Right Report Button, Player List Report Buttons & Owner Reports integration verified successfully!");
+            // 42. Testing Forgot Password & EmailJS 6-Digit Code Activation System...
+            console.log("42. Testing Forgot Password & EmailJS 6-Digit Code Activation System...");
+            await page.goto("http://127.0.0.1:4173/index.html", { waitUntil: "domcontentloaded" });
+            const forgotTestResult = await page.evaluate(async () => {
+                const btnTrigger = document.getElementById('btn-trigger-forgot-password');
+                const modalForgot = document.getElementById('modal-forgot-password');
+                const forgotUserInput = document.getElementById('forgot-username-input');
+                const btnForgotSend = document.getElementById('btn-forgot-send');
+                const forgotModalMsg = document.getElementById('forgot-modal-msg');
+
+                const hasTrigger = !!btnTrigger;
+                btnTrigger?.click();
+                await new Promise(r => setTimeout(r, 100));
+                const isModalOpen = modalForgot?.style.display === 'flex';
+
+                // Test sending for non-configured user
+                if (forgotUserInput) forgotUserInput.value = 'unconfigured_user_xyz';
+                btnForgotSend?.click();
+                await new Promise(r => setTimeout(r, 200));
+                const unconfiguredMsg = forgotModalMsg?.textContent || '';
+                const hasUnconfiguredNotice = unconfiguredMsg.includes('ei ole "Forgot Password"') || unconfiguredMsg.includes('aktiveeri');
+
+                // Test Activation via code
+                const forgotPasswordService = window.forgotPasswordService;
+                const sendRes = await forgotPasswordService.sendActivationCode('testuser123', 'testuser@example.com');
+                const hasCode = !!sendRes.code && sendRes.code.length === 6;
+
+                // Wrong code verification
+                const wrongRes = forgotPasswordService.verifyActivationCode('testuser123', '000000');
+                const wrongRejected = !wrongRes.success;
+
+                // Correct code verification
+                const correctRes = forgotPasswordService.verifyActivationCode('testuser123', sendRes.code);
+                const correctAccepted = correctRes.success;
+                const verifiedEmail = forgotPasswordService.getVerifiedEmail('testuser123');
+
+                // Test Forgot Password request with verified user
+                const reqRes = await forgotPasswordService.handleForgotPasswordRequest('testuser123');
+                const sendSuccess = reqRes.success;
+
+                // Close modal
+                document.getElementById('btn-close-forgot-modal')?.click();
+
+                return {
+                    hasTrigger,
+                    isModalOpen,
+                    hasUnconfiguredNotice,
+                    hasCode,
+                    wrongRejected,
+                    correctAccepted,
+                    verifiedEmail,
+                    sendSuccess
+                };
+            });
+            console.log("   Forgot Password Test Results:", forgotTestResult);
+            if (!forgotTestResult.hasTrigger || !forgotTestResult.isModalOpen || !forgotTestResult.hasUnconfiguredNotice || !forgotTestResult.hasCode || !forgotTestResult.wrongRejected || !forgotTestResult.correctAccepted || !forgotTestResult.verifiedEmail || !forgotTestResult.sendSuccess) {
+                throw new Error("Forgot Password verification failed: " + JSON.stringify(forgotTestResult));
+            }
+            console.log("   ✅ Forgot Password (6-digit verification code, activation & EmailJS recovery) verified successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
             process.exit(0);

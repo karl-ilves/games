@@ -1367,6 +1367,13 @@
                     <button id="btn-login" style="width: 95%; padding: 12px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);">Login</button>
                     <button id="btn-register" style="display: none; width: 95%; padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; box-shadow: 0 4px 12px rgba(46, 204, 113, 0.4);">Create Account</button>
                 </div>
+
+                <!-- Forgot Password Trigger Link -->
+                <div id="forgot-password-trigger-wrap" style="text-align: center; margin-top: 12px;">
+                    <button type="button" id="btn-trigger-forgot-password" style="background: none; border: none; color: #00f2fe; font-size: 0.86rem; font-weight: 700; cursor: pointer; text-decoration: underline; padding: 4px 8px;">
+                        ❓ Forgot password?
+                    </button>
+                </div>
             </div>
             
             <div id="user-info" style="display: none;">
@@ -1376,8 +1383,74 @@
                     <span id="user-gender-display" style="display: none; background: rgba(0,242,254,0.12); border: 1px solid rgba(0,242,254,0.4); border-radius: 20px; padding: 4px 14px; font-size: 0.88rem; font-weight: 700; color: #00f2fe;"></span>
                 </div>
                 <button id="btn-logout" style="padding: 8px 22px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Logout</button>
+
+                <!-- Pane see tööle nupp Log out all -->
+                <div id="enable-forgot-pwd-wrap" style="margin-top: 14px;">
+                    <button type="button" id="btn-enable-forgot-pwd" style="padding: 8px 16px; background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(52, 152, 219, 0.25)); border: 1.5px solid #00f2fe; color: #00f2fe; border-radius: 8px; cursor: pointer; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0 auto; box-shadow: 0 2px 10px rgba(0, 242, 254, 0.2); transition: all 0.2s;">
+                        <span>🔐</span>
+                        <span>Pane see tööle (Forgot Password)</span>
+                    </button>
+                    <div id="forgot-pwd-status-tag" style="margin-top: 6px; font-size: 0.78rem; color: #2ecc71; font-weight: 700; display: none;">
+                        ✅ Forgot Password on sellel kontol aktiivne!
+                    </div>
+                </div>
             </div>
             <div id="auth-message" style="margin-top: 12px; font-weight: bold; font-size: 0.9rem;"></div>
+
+            <!-- Forgot Password Modal -->
+            <div id="modal-forgot-password" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10001; justify-content: center; align-items: center; padding: 20px 12px; box-sizing: border-box;">
+                <div style="background: #1e272e; border: 2px solid #00f2fe; border-radius: 16px; padding: 24px; max-width: 400px; width: 100%; box-shadow: 0 15px 40px rgba(0,0,0,0.8), 0 0 25px rgba(0,242,254,0.3); text-align: center; position: relative;">
+                    <button type="button" id="btn-close-forgot-modal" style="position: absolute; top: 12px; right: 14px; background: none; border: none; color: #fff; font-size: 1.2rem; cursor: pointer;">✕</button>
+                    <div style="font-size: 2.2rem; margin-bottom: 8px;">🔐</div>
+                    <h3 style="color: #00f2fe; margin: 0 0 8px 0; font-size: 1.25rem;">Forgot Password</h3>
+                    <p style="color: #a4b0be; font-size: 0.86rem; margin-bottom: 16px;">Sisesta oma konto nimi ja me saadame parooli sinu seotud e-mailile!</p>
+                    
+                    <div style="margin-bottom: 16px; text-align: left;">
+                        <label style="display: block; color: #a4b0be; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">Konto Nimi (Username):</label>
+                        <input type="text" id="forgot-username-input" placeholder="Sisesta oma kasutajanimi" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #00f2fe; background: #131920; color: white; font-size: 0.95rem; outline: none;">
+                    </div>
+
+                    <button type="button" id="btn-forgot-send" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #00f2fe, #3498db); border: none; border-radius: 8px; color: #05141e; font-size: 1rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 14px rgba(0,242,254,0.4);">
+                        ✉️ Saada Parool
+                    </button>
+                    <div id="forgot-modal-msg" style="margin-top: 12px; font-size: 0.85rem; font-weight: 700; min-height: 20px;"></div>
+                </div>
+            </div>
+
+            <!-- Activation / 6-digit Code Modal -->
+            <div id="modal-activate-forgot" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10001; justify-content: center; align-items: center; padding: 20px 12px; box-sizing: border-box;">
+                <div style="background: #1e272e; border: 2px solid #2ecc71; border-radius: 16px; padding: 24px; max-width: 420px; width: 100%; box-shadow: 0 15px 40px rgba(0,0,0,0.8), 0 0 25px rgba(46,204,113,0.3); text-align: center; position: relative;">
+                    <button type="button" id="btn-close-activate-modal" style="position: absolute; top: 12px; right: 14px; background: none; border: none; color: #fff; font-size: 1.2rem; cursor: pointer;">✕</button>
+                    <div style="font-size: 2.2rem; margin-bottom: 8px;">📧</div>
+                    <h3 style="color: #2ecc71; margin: 0 0 8px 0; font-size: 1.25rem;">Aktiveeri Forgot Password</h3>
+                    
+                    <!-- Step 1: Sisesta email -->
+                    <div id="activate-step-1">
+                        <p style="color: #a4b0be; font-size: 0.86rem; margin-bottom: 14px;">Sisesta oma e-mail. Saadame sinna 6-kohalise kinnituskoodi!</p>
+                        <div style="margin-bottom: 16px; text-align: left;">
+                            <label style="display: block; color: #a4b0be; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">Sinu E-mail:</label>
+                            <input type="email" id="activate-email-input" placeholder="nt sinunimi@gmail.com" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #2ecc71; background: #131920; color: white; font-size: 0.95rem; outline: none;">
+                        </div>
+                        <button type="button" id="btn-activate-send-code" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #2ecc71, #27ae60); border: none; border-radius: 8px; color: #fff; font-size: 1rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 14px rgba(46,204,113,0.4);">
+                            📨 Saada 6-kohaline kood
+                        </button>
+                    </div>
+
+                    <!-- Step 2: Sisesta 6-kohaline kood -->
+                    <div id="activate-step-2" style="display: none;">
+                        <p style="color: #a4b0be; font-size: 0.86rem; margin-bottom: 14px;">Kontrolli oma meili! Sisesta sealt saadud 6-kohaline parool / kood:</p>
+                        <div style="margin-bottom: 16px; text-align: left;">
+                            <label style="display: block; color: #a4b0be; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">6-kohaline kood:</label>
+                            <input type="text" id="activate-code-input" maxlength="6" placeholder="nt 123456" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #f1c40f; background: #131920; color: #f1c40f; font-size: 1.4rem; font-weight: 900; letter-spacing: 6px; text-align: center; outline: none;">
+                        </div>
+                        <button type="button" id="btn-activate-confirm-code" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #f1c40f, #e67e22); border: none; border-radius: 8px; color: #000; font-size: 1rem; font-weight: 900; cursor: pointer; box-shadow: 0 4px 14px rgba(241,196,15,0.4);">
+                            ✅ Kinnita & Aktiveeri
+                        </button>
+                    </div>
+
+                    <div id="activate-modal-msg" style="margin-top: 12px; font-size: 0.85rem; font-weight: 700; min-height: 20px;"></div>
+                </div>
+            </div>
 
             <!-- Friends Section -->
             <div id="friends-container" style="display: none; margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); text-align: left;">

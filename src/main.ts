@@ -17,10 +17,17 @@ import { setupIcons } from './hub/icons';
 import { setupGamePreviewModal } from './hub/gamePreviewModal';
 import { setupAdRewardModal } from './hub/adReward';
 
+import { forgotPasswordService } from './shared/forgotPasswordService';
+
+if (typeof window !== 'undefined') {
+    (window as any).forgotPasswordService = forgotPasswordService;
+}
+
 // Re-exports for test and module compatibility
 export {
     GAME_AGE_REQUIREMENTS,
-    updateGameAgeRestrictions
+    updateGameAgeRestrictions,
+    forgotPasswordService
 };
 
 console.log("Playard Hub & Platform Loaded.");
