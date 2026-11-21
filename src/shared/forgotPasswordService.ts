@@ -229,31 +229,31 @@ https://www.playardgames.com`;
             const isTestEmail = targetEmail.endsWith('@example.com') || (typeof window !== 'undefined' && (window as any).__PLAYARD_IS_TESTING__);
             if (!isTestEmail) {
                 const detailedMessage = 
-`Tere, kallis Playardi mängija!
+`Hello, dear Playard player!
 
-Oled saanud selle teavituse, sest Playard Games platvormil vajutati konto "${cleanUser}" parooli taastamise nupule ("Forgot Password").
+You are receiving this email because someone requested password recovery ("Forgot Password") for your account "${cleanUser}" on Playard Games.
 
 --------------------------------------------------
-🎮 KONTO ANDMED:
-• Kasutajanimi: ${cleanUser}
-• Sinu parool: ${userPassword}
+🎮 ACCOUNT DETAILS:
+• Username: ${cleanUser}
+• Account Password: ${userPassword}
 --------------------------------------------------
 
-KUIDAS SISSE LOGIDA:
-1. Mine aadressile https://www.playardgames.com
-2. Klõpsa nupule "Logi sisse / Sign In"
-3. Sisesta oma kasutajanimi "${cleanUser}" ja ülalolev parool.
+HOW TO LOG IN:
+1. Go to https://www.playardgames.com
+2. Click "Sign In / Logi sisse"
+3. Enter your username "${cleanUser}" and your password above.
 
-TURVALISUS:
-Kui sa ei ole ise seda parooli taotlenud, ei ole põhjust muretseda – sinu parooli ei ole muudetud ning see kiri saadeti ainult sinu märgitud e-maili aadressile.
+SECURITY NOTICE:
+If you did not request this password recovery, you can safely ignore this email. Your password has not been changed, and this email was only delivered to your verified address.
 
-Head mängimist ja meeleolukaid seiklusi Playardis!
-Playard Games tiim
+Have fun and enjoy your adventures on Playard!
+The Playard Games Team
 https://www.playardgames.com`;
 
                 const templateParams = {
                     to_email: targetEmail,
-                    subject: `Playard Games - Sinu konto "${cleanUser}" paroolitaastus`,
+                    subject: `Playard Games - Password Recovery for "${cleanUser}"`,
                     passcode: userPassword,
                     message: detailedMessage
                 };
