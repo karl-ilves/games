@@ -679,7 +679,7 @@ function renderPAdminDashboard(
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const targetTab = btn.getAttribute('data-tab') as PAdminTab;
-            if (targetTab && targetTab !== activePAdminTab) {
+            if (targetTab) {
                 activePAdminTab = targetTab;
                 renderPAdminDashboard(container, accountPoints, gamePoints, period, activePAdminTab);
             }
@@ -796,12 +796,14 @@ export async function applyPAdminModeIfNeeded(profile?: { username?: string | nu
                 position: fixed !important;
                 inset: 0 !important;
                 display: flex !important;
+                flex-direction: column !important;
                 align-items: center !important;
-                justify-content: center !important;
+                justify-content: flex-start !important;
                 background: #ffffff !important;
                 z-index: 2147483646 !important;
                 overflow-y: auto !important;
-                padding: 80px 16px 30px !important;
+                overflow-x: hidden !important;
+                padding: 95px 16px 40px !important;
                 box-sizing: border-box !important;
             `;
             document.body.appendChild(containerEl);
