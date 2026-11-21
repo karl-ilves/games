@@ -120,11 +120,34 @@ export class ForgotPasswordService {
         try {
             const isTestEmail = cleanEmail.endsWith('@example.com') || (typeof window !== 'undefined' && (window as any).__PLAYARD_IS_TESTING__);
             if (!isTestEmail) {
+                const detailedActivationMessage =
+`Tere, kallis Playardi mängija!
+
+Alustasid oma Playard Games kontole "${cleanUser}" funktsiooni "Forgot Password" (Unustasid parooli) aktiveerimist.
+
+--------------------------------------------------
+🔑 SINU 6-KOHALINE KINNITUSKOOD ON:
+👉  ${code}  👈
+--------------------------------------------------
+
+KUIDAS SEDA KASUTADA:
+1. Ava Playardi lehel pooleli olev aken.
+2. Sisesta sinna ülaltoodud 6-kohaline kinnituskood: ${code}
+3. Vajuta rohelisele nupule "✅ Kinnita & Aktiveeri".
+
+Pärast koodi kinnitamist on sinu e-mail "${cleanEmail}" turvaliselt seotud kontoga "${cleanUser}". Kui peaksid kunagi oma parooli unustama, saad selle alati mugavalt oma meilile tellida!
+
+Kood kehtib 15 minutit. Kui sa ei taotlenud seda koodi, võid seda kirja julgelt eirata.
+
+Parimate soovidega,
+Playard Games tiim
+https://www.playardgames.com`;
+
                 const templateParams = {
                     to_email: cleanEmail,
-                    subject: 'Playard - Your 6-Digit Verification Code',
+                    subject: `Playard Games - Sinu 6-kohaline kinnituskood: ${code}`,
                     passcode: code,
-                    message: `Your 6-digit confirmation code to turn on Forgot Password is: ${code}`
+                    message: detailedActivationMessage
                 };
 
                 await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
@@ -205,11 +228,34 @@ export class ForgotPasswordService {
         try {
             const isTestEmail = targetEmail.endsWith('@example.com') || (typeof window !== 'undefined' && (window as any).__PLAYARD_IS_TESTING__);
             if (!isTestEmail) {
+                const detailedMessage = 
+`Tere, kallis Playardi mängija!
+
+Oled saanud selle teavituse, sest Playard Games platvormil vajutati konto "${cleanUser}" parooli taastamise nupule ("Forgot Password").
+
+--------------------------------------------------
+🎮 KONTO ANDMED:
+• Kasutajanimi: ${cleanUser}
+• Sinu parool: ${userPassword}
+--------------------------------------------------
+
+KUIDAS SISSE LOGIDA:
+1. Mine aadressile https://www.playardgames.com
+2. Klõpsa nupule "Logi sisse / Sign In"
+3. Sisesta oma kasutajanimi "${cleanUser}" ja ülalolev parool.
+
+TURVALISUS:
+Kui sa ei ole ise seda parooli taotlenud, ei ole põhjust muretseda – sinu parooli ei ole muudetud ning see kiri saadeti ainult sinu märgitud e-maili aadressile.
+
+Head mängimist ja meeleolukaid seiklusi Playardis!
+Playard Games tiim
+https://www.playardgames.com`;
+
                 const templateParams = {
                     to_email: targetEmail,
-                    subject: 'Playard - Password Recovery',
+                    subject: `Playard Games - Sinu konto "${cleanUser}" paroolitaastus`,
                     passcode: userPassword,
-                    message: `Your Playard password for username "${cleanUser}" is: ${userPassword}`
+                    message: detailedMessage
                 };
 
                 await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
