@@ -332,7 +332,8 @@ function renderPAdminDashboard(
     const allUpdates = getPlayardUpdates();
     const allProjects = getPlayardProjects();
     const publishedUpdates = allUpdates.filter(u => u.status === 'published');
-    const futureUpdates = allUpdates.filter(u => u.status === 'draft'); // Tulevased / Staging uuendused
+    // PAdmin poolt saadetud uued ettepanekud ei ilmu PAdmini nimekirja, vaid AINULT Owneri paneeli!
+    const futureUpdates = allUpdates.filter(u => u.status === 'draft' && (u.author || '').toLowerCase() !== 'padmin'); // Tulevased / Staging uuendused (ainult Ownerilt)
 
     // Analytics Card HTML
     const analyticsContentHtml = `

@@ -16768,6 +16768,10 @@ await (async () => {
                 const padminSubmitted = updatesList.find(u => u.author === 'PAdmin');
                 const isPolished = padminSubmitted && padminSubmitted.title.includes('Jõulu uuendus') && padminSubmitted.description.includes('see nooled');
 
+                // Check that it does NOT appear in PAdmin's own list (it only appears in Owner panel!)
+                const padminListHtml = document.getElementById('padmin-updates-card')?.innerHTML || '';
+                const notInPAdminList = !padminListHtml.includes('PAdmin Proposal');
+
                 // Switch back to Analytics Tab -> Shows #padmin-stats-card again
                 const analyticsTabBtnBack = document.querySelector('.padmin-tab-btn[data-tab="analytics"]');
                 analyticsTabBtnBack?.click();
@@ -16795,6 +16799,7 @@ await (async () => {
                     hasTimelineBar,
                     timelineClosed,
                     isPolished: !!isPolished,
+                    notInPAdminList,
                     filterBtns,
                     weekDots,
                     todayDots,
@@ -16804,7 +16809,7 @@ await (async () => {
                 };
             });
             console.log("   PAdmin Active State:", padminState);
-            if (!padminState.isPAdminMode || !padminState.hasLogoutBtn || !padminState.logoutBtnStillPresent || !padminState.hasAccountsCard || !padminState.hasGamesCard || padminState.todayDots !== 1 || padminState.weekDots !== 7 || padminState.monthDots !== 30 || !padminState.tooltipVisible || !padminState.hasCategoryTabs || !padminState.hasUpdatesCard || !padminState.statsCardHiddenOnUpdates || !padminState.statsCardBack || !padminState.hasAddUpdateCard || !padminState.hasTimelineOverlay || !padminState.timelineClosed || !padminState.isPolished) {
+            if (!padminState.isPAdminMode || !padminState.hasLogoutBtn || !padminState.logoutBtnStillPresent || !padminState.hasAccountsCard || !padminState.hasGamesCard || padminState.todayDots !== 1 || padminState.weekDots !== 7 || padminState.monthDots !== 30 || !padminState.tooltipVisible || !padminState.hasCategoryTabs || !padminState.hasUpdatesCard || !padminState.statsCardHiddenOnUpdates || !padminState.statsCardBack || !padminState.hasAddUpdateCard || !padminState.hasTimelineOverlay || !padminState.timelineClosed || !padminState.isPolished || !padminState.notInPAdminList) {
                 throw new Error("PAdmin Special Mode activation or Update Submission failed: " + JSON.stringify(padminState));
             }
 
