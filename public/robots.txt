@@ -1,4 +1,5 @@
 User-agent: *
-Allow: /
+Allow: /$
+Disallow: /games/
 
 Sitemap: https://www.playardgames.com/sitemap.xml
