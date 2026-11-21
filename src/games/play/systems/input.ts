@@ -89,7 +89,9 @@ export function setupInputListeners(state: PlayState, camera: THREE.PerspectiveC
     const oldControls = document.getElementById('play-screen-controls');
     if (isMobileOrTabletDevice()) {
         if (oldControls) oldControls.style.display = 'none';
+        const controlType = (state.currentGame?.mobileControlType || state.currentGame?.sceneData?.mobileControlType || 'joystick') as 'joystick' | 'dpad';
         const mobileControls = new PlayardMobileControls({
+            controlType,
             showJump: true,
             jumpLabel: 'Jump',
             onMove: (vector) => {

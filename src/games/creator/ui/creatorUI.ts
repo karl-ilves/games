@@ -648,6 +648,7 @@ export function switchPublishStep(step: 'details' | 'security') {
     const platformsContainer = document.getElementById('publish-platforms-section');
     const extraSettingsSection = document.getElementById('publish-extra-settings-section');
     const chatSection = document.getElementById('publish-chat-section');
+    const mobileControlsSection = document.getElementById('publish-mobile-controls-section');
     const cheatersSection = document.getElementById('publish-cheaters-section');
     const adPromoSection = document.getElementById('publish-ad-promo-section');
 
@@ -664,6 +665,7 @@ export function switchPublishStep(step: 'details' | 'security') {
         if (platformsContainer) platformsContainer.style.display = 'flex';
         if (extraSettingsSection) extraSettingsSection.style.display = 'flex';
         if (chatSection) chatSection.style.display = 'flex';
+        if (mobileControlsSection) mobileControlsSection.style.display = 'flex';
         if (adPromoSection) adPromoSection.style.display = 'flex';
 
         // Hide Step 2 Anti-Cheat
@@ -683,6 +685,7 @@ export function switchPublishStep(step: 'details' | 'security') {
         if (platformsContainer) platformsContainer.style.display = 'none';
         if (extraSettingsSection) extraSettingsSection.style.display = 'none';
         if (chatSection) chatSection.style.display = 'none';
+        if (mobileControlsSection) mobileControlsSection.style.display = 'none';
         if (adPromoSection) adPromoSection.style.display = 'none';
 
         // Show Step 2 Anti-Cheat
@@ -872,6 +875,60 @@ export function openPublishModal() {
         bannedWordsInput.value = sceneData.chatBannedWords || '';
     }
 
+    // Mobile Control Type (Joystick vs D-Pad / Nooled)
+    const btnCtrlJoystick = document.getElementById('btn-publish-ctrl-joystick');
+    const btnCtrlDpad = document.getElementById('btn-publish-ctrl-dpad');
+    const ctrlBadge = document.getElementById('publish-mobile-ctrl-badge');
+
+    const updateMobileCtrlUI = (ctrlType: 'joystick' | 'dpad') => {
+        csState.publishMobileControlType = ctrlType;
+        if (btnCtrlJoystick) {
+            if (ctrlType === 'joystick') {
+                btnCtrlJoystick.style.background = 'linear-gradient(135deg, #00f2fe, #0284c7)';
+                btnCtrlJoystick.style.borderColor = '#38bdf8';
+                btnCtrlJoystick.style.color = '#000';
+            } else {
+                btnCtrlJoystick.style.background = 'transparent';
+                btnCtrlJoystick.style.borderColor = 'transparent';
+                btnCtrlJoystick.style.color = '#94a3b8';
+            }
+        }
+        if (btnCtrlDpad) {
+            if (ctrlType === 'dpad') {
+                btnCtrlDpad.style.background = 'linear-gradient(135deg, #00f2fe, #0284c7)';
+                btnCtrlDpad.style.borderColor = '#38bdf8';
+                btnCtrlDpad.style.color = '#000';
+            } else {
+                btnCtrlDpad.style.background = 'transparent';
+                btnCtrlDpad.style.borderColor = 'transparent';
+                btnCtrlDpad.style.color = '#94a3b8';
+            }
+        }
+        if (ctrlBadge) {
+            if (ctrlType === 'dpad') {
+                ctrlBadge.textContent = '⬆️ Nooled (D-Pad)';
+                ctrlBadge.style.color = '#ffd32a';
+                ctrlBadge.style.borderColor = 'rgba(255, 211, 42, 0.4)';
+                ctrlBadge.style.background = 'rgba(255, 211, 42, 0.15)';
+            } else {
+                ctrlBadge.textContent = '🕹️ Liigutatav Joystick';
+                ctrlBadge.style.color = '#00f2fe';
+                ctrlBadge.style.borderColor = 'rgba(0, 242, 254, 0.4)';
+                ctrlBadge.style.background = 'rgba(0, 242, 254, 0.15)';
+            }
+        }
+    };
+
+    const initialMobileCtrl = (sceneData.mobileControlType === 'dpad') ? 'dpad' : 'joystick';
+    updateMobileCtrlUI(initialMobileCtrl);
+
+    if (btnCtrlJoystick) {
+        btnCtrlJoystick.onclick = () => updateMobileCtrlUI('joystick');
+    }
+    if (btnCtrlDpad) {
+        btnCtrlDpad.onclick = () => updateMobileCtrlUI('dpad');
+    }
+
     if (sceneData.thumbnail) {
         setPublishModalThumbnail(sceneData.thumbnail);
     } else {
@@ -1026,6 +1083,7 @@ export async function confirmAndPublishGame() {
                 entryPricePbx,
                 chatEnabled,
                 chatBannedWords,
+                mobileControlType: csState.publishMobileControlType || 'joystick',
                 skipPrompt: true // already confirmed via "Oled kindel?" modal
             });
             resolve(!!result);
@@ -1048,6 +1106,7 @@ export async function publishCurrentGame(options?: {
     entryPricePbx?: number;
     chatEnabled?: boolean;
     chatBannedWords?: string;
+    mobileControlType?: 'joystick' | 'dpad';
     skipPrompt?: boolean;
 }) {
     // Confirmation prompt ("are you shure")
@@ -1079,6 +1138,7 @@ export async function publishCurrentGame(options?: {
     const entryPricePbx = options?.entryPricePbx !== undefined ? options.entryPricePbx : (sceneData.entryPricePbx || 0);
     const chatEnabled = options?.chatEnabled !== undefined ? options.chatEnabled : (sceneData.chatEnabled !== false);
     const chatBannedWords = options?.chatBannedWords !== undefined ? options.chatBannedWords : (sceneData.chatBannedWords || '');
+    const mobileControlType = options?.mobileControlType !== undefined ? options.mobileControlType : (csState.publishMobileControlType || sceneData.mobileControlType || 'joystick');
 
     sceneData.title = title;
     sceneData.description = description;
@@ -1093,6 +1153,7 @@ export async function publishCurrentGame(options?: {
     sceneData.entryPricePbx = entryPricePbx;
     sceneData.chatEnabled = chatEnabled;
     sceneData.chatBannedWords = chatBannedWords;
+    sceneData.mobileControlType = mobileControlType;
     if (thumbnail) {
         sceneData.thumbnail = thumbnail;
     }
@@ -1130,6 +1191,7 @@ export async function publishCurrentGame(options?: {
         entryPricePbx,
         chatEnabled,
         chatBannedWords,
+        mobileControlType,
         cheatersPolicy: cheatersPolicy || sceneData.cheatersPolicy
     });
 

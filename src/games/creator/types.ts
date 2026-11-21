@@ -194,6 +194,7 @@ export interface SceneSnapshot {
     entryPricePbx?: number;
     chatEnabled?: boolean;
     chatBannedWords?: string;
+    mobileControlType?: 'joystick' | 'dpad';
 }
 
 export interface PlayTestSnapshot {

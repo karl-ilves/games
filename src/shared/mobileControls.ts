@@ -2,6 +2,7 @@
 // Detects phone / tablet vs PC and renders a large draggable joystick (bottom-left) and jump button (bottom-right)
 
 export interface MobileControlOptions {
+    controlType?: 'joystick' | 'dpad';
     showJump?: boolean;
     jumpLabel?: string;
     onMove?: (vector: { x: number; y: number }) => void; // x: -1 to 1 (left to right), y: -1 to 1 (forward to back, where -1 is up/forward and 1 is down/backward)
@@ -292,6 +293,74 @@ export class PlayardMobileControls {
                     height: 50px;
                     font-size: 15px;
                 }
+            .playard-dpad-zone {
+                position: absolute;
+                bottom: max(35px, env(safe-area-inset-bottom));
+                left: max(35px, env(safe-area-inset-left));
+                display: grid;
+                grid-template-columns: repeat(3, 56px);
+                grid-template-rows: repeat(3, 56px);
+                gap: 6px;
+                background: rgba(20, 27, 36, 0.9);
+                padding: 8px;
+                border-radius: 20px;
+                border: 2px solid rgba(0, 242, 254, 0.5);
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+                pointer-events: auto;
+                user-select: none;
+                -webkit-user-select: none;
+                touch-action: none;
+            }
+
+            .playard-dpad-btn {
+                background: rgba(45, 55, 72, 0.9);
+                border: 1.5px solid rgba(0, 242, 254, 0.6);
+                color: white;
+                font-size: 1.4rem;
+                font-weight: bold;
+                border-radius: 12px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                user-select: none;
+                -webkit-user-select: none;
+                touch-action: none;
+                transition: transform 0.1s, background 0.1s;
+            }
+
+            .playard-dpad-btn:active, .playard-dpad-btn.is-active {
+                background: #00f2fe;
+                color: #111;
+                transform: scale(0.92);
+            }
+
+            @media (max-width: 600px) {
+                .playard-dpad-zone {
+                    bottom: max(20px, env(safe-area-inset-bottom));
+                    left: max(20px, env(safe-area-inset-left));
+                    grid-template-columns: repeat(3, 48px);
+                    grid-template-rows: repeat(3, 48px);
+                    gap: 5px;
+                    padding: 6px;
+                }
+                .playard-dpad-btn {
+                    font-size: 1.2rem;
+                }
+            }
+
+            @media (orientation: landscape) and (max-height: 500px) {
+                .playard-dpad-zone {
+                    bottom: max(10px, env(safe-area-inset-bottom));
+                    left: max(12px, env(safe-area-inset-left));
+                    grid-template-columns: repeat(3, 42px);
+                    grid-template-rows: repeat(3, 42px);
+                    gap: 4px;
+                    padding: 4px;
+                }
+                .playard-dpad-btn {
+                    font-size: 1.1rem;
+                }
             }
         `;
         document.head.appendChild(style);
@@ -304,18 +373,42 @@ export class PlayardMobileControls {
         layer.className = 'playard-mobile-layer';
         layer.id = 'playard-universal-mobile-controls';
 
-        // 1. Draggable Virtual Joystick on the bottom left
-        const zone = document.createElement('div');
-        zone.className = 'playard-joystick-zone';
-        zone.id = 'playard-mobile-joystick-zone';
+        const isDpad = this.options.controlType === 'dpad';
 
-        const knob = document.createElement('div');
-        knob.className = 'playard-joystick-knob';
-        knob.id = 'playard-mobile-joystick-knob';
-        knob.innerHTML = '<span>🕹️</span>';
+        if (isDpad) {
+            // Render D-Pad (Nooled)
+            const dpadZone = document.createElement('div');
+            dpadZone.className = 'playard-dpad-zone';
+            dpadZone.id = 'playard-mobile-dpad-zone';
+            dpadZone.innerHTML = `
+                <div></div>
+                <button type="button" class="playard-dpad-btn" id="playard-dpad-up" title="Up">⬆️</button>
+                <div></div>
+                <button type="button" class="playard-dpad-btn" id="playard-dpad-left" title="Left">⬅️</button>
+                <div></div>
+                <button type="button" class="playard-dpad-btn" id="playard-dpad-right" title="Right">➡️</button>
+                <div></div>
+                <button type="button" class="playard-dpad-btn" id="playard-dpad-down" title="Down">⬇️</button>
+                <div></div>
+            `;
+            layer.appendChild(dpadZone);
+            this.zone = dpadZone;
+        } else {
+            // Render Draggable Virtual Joystick on the bottom left
+            const zone = document.createElement('div');
+            zone.className = 'playard-joystick-zone';
+            zone.id = 'playard-mobile-joystick-zone';
 
-        zone.appendChild(knob);
-        layer.appendChild(zone);
+            const knob = document.createElement('div');
+            knob.className = 'playard-joystick-knob';
+            knob.id = 'playard-mobile-joystick-knob';
+            knob.innerHTML = '<span>🕹️</span>';
+
+            zone.appendChild(knob);
+            layer.appendChild(zone);
+            this.zone = zone;
+            this.knob = knob;
+        }
 
         // 2. Action Zone on the bottom right (Jump & extra buttons)
         const actionZone = document.createElement('div');
@@ -361,12 +454,61 @@ export class PlayardMobileControls {
         document.body.appendChild(layer);
 
         this.container = layer;
-        this.zone = zone;
-        this.knob = knob;
     }
 
     private setupTouchListeners() {
-        if (!this.zone || !this.knob) return;
+        if (!this.zone) return;
+
+        if (this.options.controlType === 'dpad') {
+            const btnUp = document.getElementById('playard-dpad-up');
+            const btnDown = document.getElementById('playard-dpad-down');
+            const btnLeft = document.getElementById('playard-dpad-left');
+            const btnRight = document.getElementById('playard-dpad-right');
+
+            let up = false, down = false, left = false, right = false;
+
+            const emitVector = () => {
+                let x = 0;
+                let y = 0;
+                if (left && !right) x = -1;
+                else if (right && !left) x = 1;
+                if (up && !down) y = -1;
+                else if (down && !up) y = 1;
+
+                this.currentVector = { x, y };
+                if (this.moveListener) this.moveListener(this.currentVector);
+            };
+
+            const bindDpadBtn = (btn: HTMLElement | null, onSet: (val: boolean) => void) => {
+                if (!btn) return;
+                const press = (e: Event) => {
+                    e.preventDefault();
+                    btn.classList.add('is-active');
+                    onSet(true);
+                    emitVector();
+                };
+                const release = (e: Event) => {
+                    e.preventDefault();
+                    btn.classList.remove('is-active');
+                    onSet(false);
+                    emitVector();
+                };
+                btn.addEventListener('touchstart', press, { passive: false });
+                btn.addEventListener('touchend', release, { passive: false });
+                btn.addEventListener('touchcancel', release, { passive: false });
+                btn.addEventListener('mousedown', press);
+                btn.addEventListener('mouseup', release);
+                btn.addEventListener('mouseleave', release);
+            };
+
+            bindDpadBtn(btnUp, (v) => { up = v; });
+            bindDpadBtn(btnDown, (v) => { down = v; });
+            bindDpadBtn(btnLeft, (v) => { left = v; });
+            bindDpadBtn(btnRight, (v) => { right = v; });
+            return;
+        }
+
+        if (!this.knob) return;
 
         const maxDist = 48;
 

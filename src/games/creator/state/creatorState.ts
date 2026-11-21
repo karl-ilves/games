@@ -220,6 +220,9 @@ export function setPublishChatEnabled(val: boolean) { publishChatEnabled = val; 
 export let publishChatBannedWords: string = '';
 export function setPublishChatBannedWords(val: string) { publishChatBannedWords = val; }
 
+export let publishMobileControlType: 'joystick' | 'dpad' = 'joystick';
+export function setPublishMobileControlType(val: 'joystick' | 'dpad') { publishMobileControlType = val; }
+
 export let activeFeedbackGameId: string | null = null;
 export function setActiveFeedbackGameId(val: string | null) { activeFeedbackGameId = val; }
 

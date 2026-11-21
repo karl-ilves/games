@@ -90,6 +90,7 @@ export interface CreatedGame {
     entryPricePbx?: number; // Sissepääsu hind PlayBuxides (nt 50 PBX)
     chatEnabled?: boolean; // Serveri chat: true (on) / false (off)
     chatBannedWords?: string; // Keelatud sõnad komadega eraldatuna
+    mobileControlType?: 'joystick' | 'dpad'; // Telefoni juhtimine: joystick (liigutatav juhtkang) või nooled (dpad)
     createdAt: number;
     updatedAt: number;
 }

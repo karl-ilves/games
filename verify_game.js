@@ -16165,6 +16165,16 @@ await (async () => {
                 if (btnChatOn) btnChatOn.click();
                 if (bannedWordsInput) bannedWordsInput.value = 'loll,paha';
 
+                // Check Mobile Controls Selector Section (Joystick vs D-Pad arrows)
+                const mobileCtrlSection = document.getElementById('publish-mobile-controls-section');
+                const btnCtrlJoystick = document.getElementById('btn-publish-ctrl-joystick');
+                const btnCtrlDpad = document.getElementById('btn-publish-ctrl-dpad');
+                const hasMobileCtrlSection = !!mobileCtrlSection;
+                const hasMobileCtrlButtons = !!btnCtrlJoystick && !!btnCtrlDpad;
+
+                // Toggle mobile controls to D-Pad (nooled)
+                if (btnCtrlDpad) btnCtrlDpad.click();
+
                 // 3. Click Next (Edasi) -> Step 2 (Anti-cheat & Cheaters Protection)
                 btnNext?.click();
                 await new Promise(r => setTimeout(r, 100));
@@ -16172,6 +16182,7 @@ await (async () => {
                 const step2CheatersVisible = cheatersSection?.style.display === 'flex';
                 const step2ExtraHidden = extraSection ? window.getComputedStyle(extraSection).display === 'none' : true;
                 const step2ChatHidden = chatSection ? window.getComputedStyle(chatSection).display === 'none' : true;
+                const step2MobileCtrlHidden = mobileCtrlSection ? window.getComputedStyle(mobileCtrlSection).display === 'none' : true;
                 const step2ButtonsOk = (btnBack?.style.display !== 'none') &&
                     (btnNext?.style.display === 'none') &&
                     (btnPublish?.style.display !== 'none');
@@ -16217,6 +16228,7 @@ await (async () => {
                 const hasSavedPrice = publishedGame?.priceType === 'paid' && publishedGame?.entryPricePbx === 75;
                 const hasSavedChatEnabled = publishedGame?.chatEnabled === true;
                 const hasSavedChatBanned = publishedGame?.chatBannedWords?.includes('loll');
+                const hasSavedMobileCtrl = publishedGame?.mobileControlType === 'dpad' || publishedGame?.sceneData?.mobileControlType === 'dpad';
 
                 return {
                     isModalOpen,
@@ -16230,11 +16242,14 @@ await (async () => {
                     hasChatSection,
                     hasChatButtons,
                     hasBannedWordsInput,
+                    hasMobileCtrlSection,
+                    hasMobileCtrlButtons,
                     step1ButtonsOk,
                     step1CheatersHidden,
                     step2CheatersVisible,
                     step2ExtraHidden,
                     step2ChatHidden,
+                    step2MobileCtrlHidden,
                     step2ButtonsOk,
                     backToStep1Ok,
                     isSureModalOpen,
@@ -16245,7 +16260,8 @@ await (async () => {
                     hasSavedAccess,
                     hasSavedPrice,
                     hasSavedChatEnabled,
-                    hasSavedChatBanned
+                    hasSavedChatBanned,
+                    hasSavedMobileCtrl
                 };
             });
 
@@ -16262,11 +16278,14 @@ await (async () => {
                 !publishWorkflowTest.hasChatSection ||
                 !publishWorkflowTest.hasChatButtons ||
                 !publishWorkflowTest.hasBannedWordsInput ||
+                !publishWorkflowTest.hasMobileCtrlSection ||
+                !publishWorkflowTest.hasMobileCtrlButtons ||
                 !publishWorkflowTest.step1ButtonsOk ||
                 !publishWorkflowTest.step1CheatersHidden ||
                 !publishWorkflowTest.step2CheatersVisible ||
                 !publishWorkflowTest.step2ExtraHidden ||
                 !publishWorkflowTest.step2ChatHidden ||
+                !publishWorkflowTest.step2MobileCtrlHidden ||
                 !publishWorkflowTest.step2ButtonsOk ||
                 !publishWorkflowTest.backToStep1Ok ||
                 !publishWorkflowTest.isSureModalOpen ||
@@ -16277,11 +16296,12 @@ await (async () => {
                 !publishWorkflowTest.hasSavedAccess ||
                 !publishWorkflowTest.hasSavedPrice ||
                 !publishWorkflowTest.hasSavedChatEnabled ||
-                !publishWorkflowTest.hasSavedChatBanned
+                !publishWorkflowTest.hasSavedChatBanned ||
+                !publishWorkflowTest.hasSavedMobileCtrl
             ) {
                 throw new Error("Publish Workflow test failed: " + JSON.stringify(publishWorkflowTest));
             }
-            console.log("   ✅ Creator Studio Publish Workflow (Platforms, VR disabled, Genre, Privacy, Price & Chat config, Next/Back, 'Oled kindel?' confirmation & public release) verified!");
+            console.log("   ✅ Creator Studio Publish Workflow (Platforms, VR disabled, Genre, Privacy, Price & Chat config, Mobile Controls Selector, Next/Back, 'Oled kindel?' confirmation & public release) verified!");
 
             // 36. Testing In-Game Server Chat (Chat ON button left of 'P', Chat OFF hiding button, server-isolated messages & banned words censor)
             console.log("36. Testing In-Game Server Chat (Chat button left of P, strict server isolation, banned words filter & chat ON/OFF)...");
