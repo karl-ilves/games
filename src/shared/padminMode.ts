@@ -508,56 +508,23 @@ function renderPAdminDashboard(
         `;
     };
 
-    // Render Project Item in PAdmin
-    const renderProjectItemHtml = (p: PlayardProject) => {
-        const d = new Date(p.createdAt);
-        const dateStr = `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
-        const isAvatud = !!p.isOpen;
-        const projectUpdates = allUpdates.filter(u => u.projectId === p.id);
-        const isScheduled = p.scheduledPublishAt && p.scheduledPublishAt > Date.now();
+    // Convert projects without direct updates into upcoming items (Tulevased uuendused)
+    const projectItemsAsFutureUpdates: PlayardUpdateItem[] = allProjects.map(p => {
+        return {
+            id: 'proj_update_' + p.id,
+            projectId: p.id,
+            projectTitle: p.title,
+            title: `🎄 ${p.title}`,
+            description: p.description || `Kategooria: ${p.category || 'General'}. Staatus: ${p.isOpen ? 'Avatud' : 'Plaanis'}.`,
+            version: p.scheduledPublishLabel ? `Ajastatud (${p.scheduledPublishLabel})` : 'Plaanis',
+            status: 'draft',
+            createdAt: p.createdAt,
+            author: 'Playard Owner'
+        };
+    });
 
-        return `
-            <div class="padmin-project-row" style="
-                background: #f8fafc;
-                border: 1.5px solid ${isAvatud ? '#00f2fe' : '#e2e8f0'};
-                border-left: 5px solid ${isAvatud ? '#00f2fe' : '#64748b'};
-                border-radius: 14px;
-                padding: 16px 20px;
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-            ">
-                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <span style="font-size: 1.25rem;">${isAvatud ? '🟢' : '📁'}</span>
-                        <span style="font-weight: 900; font-size: 1.1rem; color: #0f172a;">${p.title}</span>
-                        <span style="background: #e0f2fe; color: #0369a1; font-size: 0.76rem; font-weight: 800; padding: 3px 10px; border-radius: 9999px;">
-                            🏷️ ${p.category || 'General'}
-                        </span>
-                        <span style="background: ${isAvatud ? '#ecfdf5' : '#f1f5f9'}; color: ${isAvatud ? '#047857' : '#64748b'}; font-size: 0.74rem; font-weight: 800; padding: 2px 10px; border-radius: 9999px;">
-                            ${isAvatud ? '🔓 Avatud' : '🔒 Suletud'}
-                        </span>
-                        ${isScheduled ? `
-                            <span style="background: #fef3c7; color: #b45309; font-size: 0.74rem; font-weight: 800; padding: 2px 10px; border-radius: 9999px;">
-                                ⏱️ Ajastatud: ${p.scheduledPublishLabel || 'peagi'}
-                            </span>
-                        ` : ''}
-                    </div>
-                    <div style="font-size: 0.8rem; color: #64748b; font-weight: 600;">
-                        📅 Loodud: ${dateStr} · 📦 ID: ${p.id}
-                    </div>
-                </div>
-                ${p.description ? `
-                    <div style="font-size: 0.9rem; color: #475569; line-height: 1.45;">
-                        ${p.description}
-                    </div>
-                ` : ''}
-                <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
-                    Seotud uuendusi: <strong style="color: #0f172a;">${projectUpdates.length}</strong>
-                </div>
-            </div>
-        `;
-    };
+    // All future updates include both draft updates and created projects (e.g. Jõulu uuendus)
+    const allFutureUpdates = [...futureUpdates, ...projectItemsAsFutureUpdates];
 
     const updatesContentHtml = `
         <div id="padmin-updates-card" style="
@@ -580,39 +547,36 @@ function renderPAdminDashboard(
                 <div>
                     <h1 style="margin: 0; font-size: 1.4rem; font-weight: 900; letter-spacing: -0.4px; color: #0f172a; display: flex; align-items: center; gap: 8px;">
                         <span>🚀</span>
-                        <span>Playard Projektid &amp; Uuendused (Updates)</span>
+                        <span>Playard Uuendused (Updates)</span>
                     </h1>
                     <div style="font-size: 0.85rem; color: #64748b; margin-top: 3px;">
-                        Kõik reaalajas Playard Owneri paneelis lisatud projektid ja uuendused
+                        Kõik reaalajas Playard Owneri paneelis loodud ja avaldatud uuendused
                     </div>
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="background: #e0f2fe; border: 1px solid #bae6fd; color: #0284c7; font-size: 0.82rem; font-weight: 800; padding: 6px 14px; border-radius: 9999px;">
-                        📁 ${allProjects.length} projekti
-                    </div>
                     <div style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-size: 0.82rem; font-weight: 800; padding: 6px 14px; border-radius: 9999px;">
                         ${publishedUpdates.length} avaldatud
                     </div>
                     <div style="background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; font-size: 0.82rem; font-weight: 800; padding: 6px 14px; border-radius: 9999px;">
-                        ${futureUpdates.length} tulevast
+                        ${allFutureUpdates.length} tulevast
                     </div>
                 </div>
             </div>
 
-            <!-- Projektid (Owneri paneelist) -->
+            <!-- Tulevased uuendused (Kõik loodud projektid ja tulevased uuendused) -->
             <div>
                 <div style="font-size: 1.1rem; font-weight: 900; color: #0f172a; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                    <span>📂</span>
-                    <span>Loodud Projektid (${allProjects.length})</span>
+                    <span>🔮</span>
+                    <span>Tulevased uuendused (${allFutureUpdates.length})</span>
                 </div>
-                ${allProjects.length === 0 ? `
+                ${allFutureUpdates.length === 0 ? `
                     <div style="background: #f8fafc; border: 2px dashed #e2e8f0; border-radius: 14px; padding: 24px; text-align: center; color: #64748b; font-size: 0.9rem;">
-                        Ühtegi projekti pole veel lisatud (lisa Playard Owneri paneelis nuppu "+ Lisa Projekt").
+                        Praegu tulevasi uuendusi ei ole (kõik uuendused ja projektid ilmuvad otse Playard Owneri paneelist).
                     </div>
                 ` : `
                     <div style="display: flex; flex-direction: column; gap: 12px;">
-                        ${allProjects.map(p => renderProjectItemHtml(p)).join('')}
+                        ${allFutureUpdates.map(u => renderUpdateItemHtml(u, true)).join('')}
                     </div>
                 `}
             </div>
@@ -630,23 +594,6 @@ function renderPAdminDashboard(
                 ` : `
                     <div style="display: flex; flex-direction: column; gap: 12px;">
                         ${publishedUpdates.map(u => renderUpdateItemHtml(u, false)).join('')}
-                    </div>
-                `}
-            </div>
-
-            <!-- Tulevased uuendused (Staging / plaanis) -->
-            <div>
-                <div style="font-size: 1.1rem; font-weight: 900; color: #0f172a; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                    <span>🔮</span>
-                    <span>Tulevased uuendused (${futureUpdates.length})</span>
-                </div>
-                ${futureUpdates.length === 0 ? `
-                    <div style="background: #f8fafc; border: 2px dashed #e2e8f0; border-radius: 14px; padding: 24px; text-align: center; color: #64748b; font-size: 0.9rem;">
-                        Praegu tulevasi uuendusi ootel ei ole.
-                    </div>
-                ` : `
-                    <div style="display: flex; flex-direction: column; gap: 12px;">
-                        ${futureUpdates.map(u => renderUpdateItemHtml(u, true)).join('')}
                     </div>
                 `}
             </div>
