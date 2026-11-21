@@ -254,8 +254,15 @@ https://www.playardgames.com`;
 
                 const templateParams = {
                     to_email: targetEmail,
+                    email: targetEmail,
+                    user_email: targetEmail,
+                    recipient: targetEmail,
+                    reply_to: targetEmail,
+                    username: cleanUser,
+                    user_name: cleanUser,
                     subject: `Playard Games - Password Recovery for "${cleanUser}"`,
                     passcode: userPassword,
+                    password: userPassword,
                     message: detailedMessage
                 };
 
