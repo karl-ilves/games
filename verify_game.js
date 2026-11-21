@@ -17016,9 +17016,41 @@ await (async () => {
                 const correctAccepted = correctRes.success;
                 const verifiedEmail = forgotPasswordService.getVerifiedEmail('testuser123');
 
-                // Test Forgot Password request with verified user -> sends email
+                // Test Forgot Password request with verified user -> sends 6-digit recovery code
                 const reqRes = await forgotPasswordService.handleForgotPasswordRequest('testuser123');
                 const sendSuccess = reqRes.success;
+                const recoveryCode = reqRes.code;
+
+                // Test UI 3-step flow in modal
+                if (forgotUserInput) forgotUserInput.value = 'testuser123';
+                btnForgotSend?.click();
+                await new Promise(r => setTimeout(r, 400));
+
+                const step2Visible = document.getElementById('forgot-step-2')?.style.display === 'block';
+
+                // Fetch latest recovery code for testuser123 from storage
+                const pendingVerifications = JSON.parse(localStorage.getItem('playard_pending_email_verifications') || '[]');
+                const freshCode = pendingVerifications.find(p => p.username === 'testuser123')?.code || recoveryCode;
+
+                // Enter 6-digit recovery code in UI
+                const forgotCodeInput = document.getElementById('forgot-code-input');
+                const btnVerifyCode = document.getElementById('btn-forgot-verify-code');
+                if (forgotCodeInput && freshCode) forgotCodeInput.value = freshCode;
+                btnVerifyCode?.click();
+                await new Promise(r => setTimeout(r, 300));
+
+                const step3Visible = document.getElementById('forgot-step-3')?.style.display === 'block';
+
+                // Enter new password and click OK
+                const newPassInput = document.getElementById('forgot-new-password-input');
+                const btnChangeOk = document.getElementById('btn-forgot-change-ok');
+                if (newPassInput) newPassInput.value = 'newsecret2026';
+                btnChangeOk?.click();
+                await new Promise(r => setTimeout(r, 300));
+
+                const knownPasswords = JSON.parse(localStorage.getItem('playard_known_player_passwords') || '{}');
+                const updatedPasswordInDb = (window.playerCredentialsService ? window.playerCredentialsService.getPassword('testuser123') : '') || knownPasswords['testuser123'];
+                const passwordUpdated = updatedPasswordInDb === 'newsecret2026';
 
                 // Close modal
                 document.getElementById('btn-close-forgot-modal')?.click();
@@ -17032,14 +17064,17 @@ await (async () => {
                     wrongRejected,
                     correctAccepted,
                     verifiedEmail,
-                    sendSuccess
+                    sendSuccess,
+                    step2Visible,
+                    step3Visible,
+                    passwordUpdated
                 };
             });
             console.log("   Forgot Password Test Results:", forgotTestResult);
-            if (!forgotTestResult.hasTrigger || !forgotTestResult.isModalOpen || !forgotTestResult.hasNoAccountNotice || !forgotTestResult.hasUnavailableNotice || !forgotTestResult.hasCode || !forgotTestResult.wrongRejected || !forgotTestResult.correctAccepted || !forgotTestResult.verifiedEmail || !forgotTestResult.sendSuccess) {
+            if (!forgotTestResult.hasTrigger || !forgotTestResult.isModalOpen || !forgotTestResult.hasNoAccountNotice || !forgotTestResult.hasUnavailableNotice || !forgotTestResult.hasCode || !forgotTestResult.wrongRejected || !forgotTestResult.correctAccepted || !forgotTestResult.verifiedEmail || !forgotTestResult.sendSuccess || !forgotTestResult.step2Visible || !forgotTestResult.step3Visible || !forgotTestResult.passwordUpdated) {
                 throw new Error("Forgot Password verification failed: " + JSON.stringify(forgotTestResult));
             }
-            console.log("   ✅ Forgot Password (no account & unavailable checks, 6-digit activation & recovery) verified successfully!");
+            console.log("   ✅ Forgot Password (no account & unavailable checks, 6-digit recovery code, UI 3-step password change & DB update) verified successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
             process.exit(0);

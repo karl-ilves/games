@@ -1398,21 +1398,51 @@
             <div id="auth-message" style="margin-top: 12px; font-weight: bold; font-size: 0.9rem;"></div>
 
             <!-- Forgot Password Modal -->
+            <!-- Forgot Password Modal -->
             <div id="modal-forgot-password" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10001; justify-content: center; align-items: center; padding: 20px 12px; box-sizing: border-box;">
                 <div style="background: #1e272e; border: 2px solid #00f2fe; border-radius: 16px; padding: 24px; max-width: 400px; width: 100%; box-shadow: 0 15px 40px rgba(0,0,0,0.8), 0 0 25px rgba(0,242,254,0.3); text-align: center; position: relative;">
                     <button type="button" id="btn-close-forgot-modal" style="position: absolute; top: 12px; right: 14px; background: none; border: none; color: #fff; font-size: 1.2rem; cursor: pointer;">✕</button>
                     <div style="font-size: 2.2rem; margin-bottom: 8px;">🔐</div>
                     <h3 style="color: #00f2fe; margin: 0 0 8px 0; font-size: 1.25rem;">Forgot Password</h3>
-                    <p style="color: #a4b0be; font-size: 0.86rem; margin-bottom: 16px;">Sisesta oma konto nimi ja me saadame parooli sinu seotud e-mailile!</p>
-                    
-                    <div style="margin-bottom: 16px; text-align: left;">
-                        <label style="display: block; color: #a4b0be; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">Konto Nimi (Username):</label>
-                        <input type="text" id="forgot-username-input" placeholder="Sisesta oma kasutajanimi" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #00f2fe; background: #131920; color: white; font-size: 0.95rem; outline: none;">
+
+                    <!-- Step 1: Sisesta kasutajanimi ja vajuta Saada -->
+                    <div id="forgot-step-1">
+                        <p style="color: #a4b0be; font-size: 0.86rem; margin-bottom: 16px;">Sisesta oma konto nimi ja me saadame 6-kohalise koodi sinu seotud e-mailile!</p>
+                        
+                        <div style="margin-bottom: 16px; text-align: left;">
+                            <label style="display: block; color: #a4b0be; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">Konto Nimi (Username):</label>
+                            <input type="text" id="forgot-username-input" placeholder="Sisesta oma kasutajanimi" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #00f2fe; background: #131920; color: white; font-size: 0.95rem; outline: none;">
+                        </div>
+
+                        <button type="button" id="btn-forgot-send" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #00f2fe, #3498db); border: none; border-radius: 8px; color: #05141e; font-size: 1rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 14px rgba(0,242,254,0.4);">
+                            ✉️ Saada
+                        </button>
                     </div>
 
-                    <button type="button" id="btn-forgot-send" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #00f2fe, #3498db); border: none; border-radius: 8px; color: #05141e; font-size: 1rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 14px rgba(0,242,254,0.4);">
-                        ✉️ Saada Parool
-                    </button>
+                    <!-- Step 2: Sisesta meilile saabunud 6-kohaline kood -->
+                    <div id="forgot-step-2" style="display: none;">
+                        <p style="color: #a4b0be; font-size: 0.86rem; margin-bottom: 14px;">Kontrolli oma meili! Sisesta sealt saadud 6-kohaline kood:</p>
+                        <div style="margin-bottom: 16px; text-align: left;">
+                            <label style="display: block; color: #a4b0be; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">6-kohaline kood:</label>
+                            <input type="text" id="forgot-code-input" maxlength="6" placeholder="nt 123456" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #f1c40f; background: #131920; color: #f1c40f; font-size: 1.4rem; font-weight: 900; letter-spacing: 6px; text-align: center; outline: none;">
+                        </div>
+                        <button type="button" id="btn-forgot-verify-code" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #f1c40f, #e67e22); border: none; border-radius: 8px; color: #000; font-size: 1rem; font-weight: 900; cursor: pointer; box-shadow: 0 4px 14px rgba(241,196,15,0.4);">
+                            ✅ Kinnita Kood
+                        </button>
+                    </div>
+
+                    <!-- Step 3: Parooli vahetamine (Uus parool + OK) -->
+                    <div id="forgot-step-3" style="display: none;">
+                        <p style="color: #2ecc71; font-size: 0.88rem; font-weight: bold; margin-bottom: 14px;">Kood on õige! Sisesta oma uus parool:</p>
+                        <div style="margin-bottom: 16px; text-align: left;">
+                            <label style="display: block; color: #a4b0be; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">Uus Parool:</label>
+                            <input type="password" id="forgot-new-password-input" placeholder="Sisesta uus parool" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #2ecc71; background: #131920; color: white; font-size: 1rem; outline: none;">
+                        </div>
+                        <button type="button" id="btn-forgot-change-ok" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #2ecc71, #27ae60); border: none; border-radius: 8px; color: #ffffff; font-size: 1.05rem; font-weight: 900; cursor: pointer; box-shadow: 0 4px 14px rgba(46,204,113,0.4);">
+                            OK
+                        </button>
+                    </div>
+
                     <div id="forgot-modal-msg" style="margin-top: 12px; font-size: 0.85rem; font-weight: 700; min-height: 20px;"></div>
                 </div>
             </div>

@@ -119,3 +119,7 @@ export class PlayerCredentialsService {
 }
 
 export const playerCredentialsService = new PlayerCredentialsService();
+
+if (typeof window !== 'undefined') {
+    (window as any).playerCredentialsService = playerCredentialsService;
+}

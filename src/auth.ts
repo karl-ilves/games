@@ -1666,14 +1666,30 @@ export async function initAuth() {
 
     let currentActivationUsername = '';
 
+    const forgotStep1 = document.getElementById('forgot-step-1');
+    const forgotStep2 = document.getElementById('forgot-step-2');
+    const forgotStep3 = document.getElementById('forgot-step-3');
+    const forgotCodeInput = document.getElementById('forgot-code-input') as HTMLInputElement | null;
+    const btnForgotVerifyCode = document.getElementById('btn-forgot-verify-code');
+    const forgotNewPasswordInput = document.getElementById('forgot-new-password-input') as HTMLInputElement | null;
+    const btnForgotChangeOk = document.getElementById('btn-forgot-change-ok');
+
+    let currentRecoveryUsername = '';
+
     function openForgotModal() {
         if (!modalForgot) return;
         modalForgot.style.display = 'flex';
+        if (forgotStep1) forgotStep1.style.display = 'block';
+        if (forgotStep2) forgotStep2.style.display = 'none';
+        if (forgotStep3) forgotStep3.style.display = 'none';
         if (forgotModalMsg) { forgotModalMsg.textContent = ''; forgotModalMsg.style.color = '#fff'; }
         if (forgotUsernameInput) {
             forgotUsernameInput.value = usernameInput?.value || '';
             forgotUsernameInput.focus();
         }
+        if (forgotCodeInput) forgotCodeInput.value = '';
+        if (forgotNewPasswordInput) forgotNewPasswordInput.value = '';
+        currentRecoveryUsername = '';
     }
 
     function closeForgotModal() {
@@ -1683,6 +1699,7 @@ export async function initAuth() {
     btnTriggerForgot?.addEventListener('click', openForgotModal);
     btnCloseForgot?.addEventListener('click', closeForgotModal);
 
+    // Step 1: Saada meilile 6-kohaline kood
     btnForgotSend?.addEventListener('click', async () => {
         const u = forgotUsernameInput?.value.trim() || '';
 
@@ -1696,13 +1713,95 @@ export async function initAuth() {
 
         if (forgotModalMsg) {
             forgotModalMsg.style.color = '#00f2fe';
-            forgotModalMsg.textContent = 'Kontrollin ja saadan meili...';
+            forgotModalMsg.textContent = 'Kontrollin ja saadan koodi meilile...';
         }
 
-        const res = await forgotPasswordService.handleForgotPasswordRequest(u);
-        if (forgotModalMsg) {
-            forgotModalMsg.style.color = res.success ? '#2ecc71' : '#e74c3c';
-            forgotModalMsg.textContent = res.message;
+        const res = await forgotPasswordService.sendRecoveryCode(u);
+        if (res.success) {
+            currentRecoveryUsername = u;
+            if (forgotStep1) forgotStep1.style.display = 'none';
+            if (forgotStep2) forgotStep2.style.display = 'block';
+            if (forgotStep3) forgotStep3.style.display = 'none';
+            if (forgotModalMsg) {
+                forgotModalMsg.style.color = '#2ecc71';
+                forgotModalMsg.textContent = res.message;
+            }
+            if (forgotCodeInput) {
+                forgotCodeInput.value = '';
+                forgotCodeInput.focus();
+            }
+        } else {
+            if (forgotModalMsg) {
+                forgotModalMsg.style.color = '#e74c3c';
+                forgotModalMsg.textContent = res.message;
+            }
+        }
+    });
+
+    // Step 2: Kinnita 6-kohaline kood
+    btnForgotVerifyCode?.addEventListener('click', () => {
+        const code = forgotCodeInput?.value.trim() || '';
+        if (!code || code.length !== 6) {
+            if (forgotModalMsg) {
+                forgotModalMsg.style.color = '#e74c3c';
+                forgotModalMsg.textContent = 'Palun sisesta 6-kohaline kood!';
+            }
+            return;
+        }
+
+        const res = forgotPasswordService.verifyRecoveryCode(currentRecoveryUsername, code);
+        if (res.success) {
+            if (forgotStep1) forgotStep1.style.display = 'none';
+            if (forgotStep2) forgotStep2.style.display = 'none';
+            if (forgotStep3) forgotStep3.style.display = 'block';
+            if (forgotModalMsg) {
+                forgotModalMsg.style.color = '#2ecc71';
+                forgotModalMsg.textContent = 'Kood õige! Nüüd saad määrata uue parooli.';
+            }
+            if (forgotNewPasswordInput) {
+                forgotNewPasswordInput.value = '';
+                forgotNewPasswordInput.focus();
+            }
+        } else {
+            if (forgotModalMsg) {
+                forgotModalMsg.style.color = '#e74c3c';
+                forgotModalMsg.textContent = res.error || 'Vale kood!';
+            }
+        }
+    });
+
+    // Step 3: Salvesta uus parool andmebaasi (OK vajutus)
+    btnForgotChangeOk?.addEventListener('click', () => {
+        const newPass = forgotNewPasswordInput?.value.trim() || '';
+        if (!newPass) {
+            if (forgotModalMsg) {
+                forgotModalMsg.style.color = '#e74c3c';
+                forgotModalMsg.textContent = 'Palun sisesta uus parool!';
+            }
+            return;
+        }
+
+        const res = forgotPasswordService.resetPassword(currentRecoveryUsername, newPass);
+        if (res.success) {
+            if (forgotModalMsg) {
+                forgotModalMsg.style.color = '#2ecc71';
+                forgotModalMsg.textContent = '🎉 Uus parool on edukalt andmebaasi salvestatud!';
+            }
+            if (passwordInput) {
+                passwordInput.value = newPass;
+            }
+            if (usernameInput && currentRecoveryUsername) {
+                usernameInput.value = currentRecoveryUsername;
+            }
+            setTimeout(() => {
+                closeForgotModal();
+                showMsg('Parool on uuendatud! Saad nüüd uue parooliga sisse logida.', 'success');
+            }, 1200);
+        } else {
+            if (forgotModalMsg) {
+                forgotModalMsg.style.color = '#e74c3c';
+                forgotModalMsg.textContent = res.error || 'Viga parooli vahetamisel.';
+            }
         }
     });
 

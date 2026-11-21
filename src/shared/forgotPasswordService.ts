@@ -238,16 +238,12 @@ https://www.playardgames.com`;
     }
 
     /**
-     * "Forgot Password" saatmine:
-     * Kasutaja sisestab AINULT oma kasutajanime.
-     * - Kui kontot pole olemas: 'no account'
-     * - Kui konto on olemas, aga pole aktiveeritud: 'unavailable'
-     * - Parooli lehel ei näidata (saadetakse ainult meilile).
+     * Saadab 6-kohalise koodi kasutajale parooli taastamiseks ("Forgot Password")
      */
-    public async handleForgotPasswordRequest(username: string): Promise<{ success: boolean; message: string; notConfigured?: boolean; noAccount?: boolean }> {
+    public async sendRecoveryCode(username: string): Promise<{ success: boolean; code?: string; message: string; notConfigured?: boolean; noAccount?: boolean }> {
         const cleanUser = (username || '').toLowerCase().trim();
         if (!cleanUser) {
-            return { success: false, message: 'Please enter your username!' };
+            return { success: false, message: 'Palun sisesta kasutajanimi!' };
         }
 
         const accountExists = this.isAccountExisting(cleanUser);
@@ -269,34 +265,47 @@ https://www.playardgames.com`;
         }
 
         const targetEmail = verifiedEmail;
+        const code = this.generate6DigitCode();
 
-        // Leia kasutaja parool
-        const userPassword = playerCredentialsService.getPassword(cleanUser) || 'Kontrolli oma kontot';
+        // Salvesta pooleliolev taastamiskood 15 minutiks
+        const pending: PendingVerification = {
+            username: cleanUser,
+            email: targetEmail,
+            code,
+            createdAt: Date.now(),
+            expiresAt: Date.now() + 15 * 60 * 1000
+        };
+
+        try {
+            const raw = localStorage.getItem(PENDING_VERIFICATIONS_KEY);
+            const list: PendingVerification[] = raw ? JSON.parse(raw) : [];
+            const filtered = list.filter(p => p.username !== cleanUser);
+            filtered.push(pending);
+            localStorage.setItem(PENDING_VERIFICATIONS_KEY, JSON.stringify(filtered));
+        } catch (e) {}
 
         try {
             const isTestEmail = targetEmail.endsWith('@example.com') || (typeof window !== 'undefined' && (window as any).__PLAYARD_IS_TESTING__);
             if (!isTestEmail) {
-                const detailedMessage = 
-`Hello, dear Playard player!
+                const detailedMessage =
+`Tere, kallis Playardi mängija!
 
-You are receiving this email because someone requested password recovery ("Forgot Password") for your account "${cleanUser}" on Playard Games.
+Alustasid oma Playard Games kontole "${cleanUser}" parooli vahetamist ("Forgot Password").
 
 --------------------------------------------------
-🎮 ACCOUNT DETAILS:
-• Username: ${cleanUser}
-• Account Password: ${userPassword}
+🔑 SINU 6-KOHALINE TAASTAMISKOOD ON:
+👉  ${code}  👈
 --------------------------------------------------
 
-HOW TO LOG IN:
-1. Go to https://www.playardgames.com
-2. Click "Sign In / Logi sisse"
-3. Enter your username "${cleanUser}" and your password above.
+KUIDAS SEDA KASUTADA:
+1. Ava Playardi lehel pooleli olev "Forgot Password" aken.
+2. Sisesta sinna ülaltoodud 6-kohaline kood: ${code}
+3. Vajuta "✅ Kinnita Kood" ning sisesta oma uus parool!
 
-SECURITY NOTICE:
-If you did not request this password recovery, you can safely ignore this email. Your password has not been changed, and this email was only delivered to your verified address.
+Kood kehtib 15 minutit. Kui sa ei taotlenud parooli vahetust, võid seda kirja julgelt eirata.
 
-Have fun and enjoy your adventures on Playard!
-The Playard Games Team
+Parimate soovidega,
+Playard Games tiim
 https://www.playardgames.com`;
 
                 const templateParams = {
@@ -307,27 +316,102 @@ https://www.playardgames.com`;
                     reply_to: targetEmail,
                     username: cleanUser,
                     user_name: cleanUser,
-                    subject: `Playard Games - Password Recovery for "${cleanUser}"`,
-                    passcode: userPassword,
-                    password: userPassword,
+                    subject: `Playard Games - Sinu 6-kohaline kood parooli taastamiseks: ${code}`,
+                    passcode: code,
+                    password: code,
                     message: detailedMessage
                 };
 
-                await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_PASSWORD_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
+                await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
             }
             return {
                 success: true,
-                password: userPassword,
-                message: `Parool on edukalt saadetud e-mailile (${targetEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3')})!`
+                code,
+                message: `6-kohaline kood on saadetud sinu meilile (${targetEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3')})!`
             };
         } catch (e: any) {
             console.error('EmailJS send error:', e);
             return {
                 success: true,
-                password: userPassword,
-                message: `Parool on saadetud e-mailile (${targetEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3')})!`
+                code,
+                message: `6-kohaline kood on saadetud sinu meilile (${targetEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3')})!`
             };
         }
+    }
+
+    /**
+     * Kontrollib taastamiskoodi enne uue parooli sisestamist
+     */
+    public verifyRecoveryCode(username: string, code: string): { success: boolean; error?: string } {
+        const cleanUser = (username || '').toLowerCase().trim();
+        const codeTrimmed = (code || '').trim();
+
+        try {
+            const raw = localStorage.getItem(PENDING_VERIFICATIONS_KEY);
+            const list: PendingVerification[] = raw ? JSON.parse(raw) : [];
+            const match = list.find(p => p.username === cleanUser);
+
+            if (!match) {
+                return { success: false, error: 'Kinnituskoodi ei leitud. Palun taotle uus kood!' };
+            }
+
+            if (Date.now() > match.expiresAt) {
+                return { success: false, error: 'Kinnituskood on aegunud! Palun taotle uus kood.' };
+            }
+
+            if (match.code !== codeTrimmed) {
+                return { success: false, error: 'Vale 6-kohaline kood! Kontrolli oma meili.' };
+            }
+
+            return { success: true };
+        } catch (e) {
+            return { success: false, error: 'Viga koodi kinnitamisel.' };
+        }
+    }
+
+    /**
+     * Vahetab kasutaja parooli ja salvestab selle andmebaasi / mällu
+     */
+    public resetPassword(username: string, newPass: string): { success: boolean; error?: string } {
+        const cleanUser = (username || '').toLowerCase().trim();
+        const pass = (newPass || '').trim();
+
+        if (!cleanUser) {
+            return { success: false, error: 'Kasutajanimi puudub!' };
+        }
+        if (!pass || pass.length < 3) {
+            return { success: false, error: 'Uus parool peab olema vähemalt 3 märki pikk!' };
+        }
+
+        // 1. Salvesta playerCredentialsService kaudu
+        playerCredentialsService.recordPassword(cleanUser, pass);
+
+        // 2. Eemalda pending verifications nimekirjast
+        try {
+            const raw = localStorage.getItem(PENDING_VERIFICATIONS_KEY);
+            const list: PendingVerification[] = raw ? JSON.parse(raw) : [];
+            const filtered = list.filter(p => p.username !== cleanUser);
+            localStorage.setItem(PENDING_VERIFICATIONS_KEY, JSON.stringify(filtered));
+        } catch (e) {}
+
+        // 3. Uuenda Supabase profiles tabelis kui võimalik
+        if (supabase) {
+            supabase
+                .from('profiles')
+                .update({ password: pass })
+                .ilike('username', cleanUser)
+                .then(() => {})
+                .catch(() => {});
+        }
+
+        return { success: true };
+    }
+
+    /**
+     * Tagurpidi-ühilduv Forgot Password saatmise abimeetod
+     */
+    public async handleForgotPasswordRequest(username: string): Promise<{ success: boolean; message: string; notConfigured?: boolean; noAccount?: boolean; code?: string }> {
+        return this.sendRecoveryCode(username);
     }
 }
 
