@@ -33,14 +33,31 @@ export interface PlayardUpdateItem {
 const PROJECTS_STORAGE_KEY = 'playard_owner_projects';
 const UPDATES_STORAGE_KEY = 'playard_owner_updates';
 const CATEGORIES_STORAGE_KEY = 'playard_owner_custom_categories';
-const OWNER_DATA_WIPED_KEY = 'playard_owner_projects_and_updates_wiped_v2';
+const OWNER_DATA_WIPED_KEY = 'playard_owner_projects_and_updates_wiped_v3';
 
-// Ensure existing legacy projects and updates are emptied on load
+// Clear custom categories and add an official update
 if (typeof window !== 'undefined' && window.localStorage) {
     try {
         if (!localStorage.getItem(OWNER_DATA_WIPED_KEY)) {
-            localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify([]));
-            localStorage.setItem(UPDATES_STORAGE_KEY, JSON.stringify([]));
+            // Eemalda eelmised tehislikult loodud kategooriad
+            localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify([]));
+            // Kui uuendusi pole, lisa ametlik avaldatud uuendus
+            const existingUpdates = JSON.parse(localStorage.getItem(UPDATES_STORAGE_KEY) || '[]');
+            if (!Array.isArray(existingUpdates) || existingUpdates.length === 0) {
+                const initialUpdate: PlayardUpdateItem = {
+                    id: 'update_playard_2_0_launch',
+                    projectId: 'global',
+                    projectTitle: 'Üldine Playard',
+                    title: 'Playard 2.0 Suur Uuendus & Creator Studio Täiendused',
+                    description: 'Lisatud mobiili juhtimise valik (Joystick vs Nooled D-Pad), reaalajas PAdmin analüütika graafikud ning uuenduste haldus.',
+                    version: 'v2.0',
+                    status: 'published',
+                    createdAt: Date.now(),
+                    publishedAt: Date.now(),
+                    author: 'Playard Owner'
+                };
+                localStorage.setItem(UPDATES_STORAGE_KEY, JSON.stringify([initialUpdate]));
+            }
             localStorage.setItem(OWNER_DATA_WIPED_KEY, 'true');
         }
     } catch (e) {}
@@ -178,12 +195,27 @@ export function getPlayardUpdates(): PlayardUpdateItem[] {
     if (typeof window === 'undefined' || !window.localStorage) return [];
     try {
         const raw = localStorage.getItem(UPDATES_STORAGE_KEY);
-        if (raw) {
+        if (raw !== null) {
             const list = JSON.parse(raw);
             if (Array.isArray(list)) return list;
         }
     } catch (e) {}
-    return [];
+
+    // Default Playard update if storage has never been initialized
+    const fallbackUpdate: PlayardUpdateItem = {
+        id: 'update_playard_2_0_launch',
+        projectId: 'global',
+        projectTitle: 'Üldine Playard',
+        title: 'Playard 2.0 Suur Uuendus & Creator Studio Täiendused',
+        description: 'Lisatud mobiili juhtimise valik (Joystick vs Nooled D-Pad), reaalajas PAdmin analüütika graafikud ning uuenduste haldus.',
+        version: 'v2.0',
+        status: 'published',
+        createdAt: 1763719200000,
+        publishedAt: 1763719200000,
+        author: 'Playard Owner'
+    };
+    savePlayardUpdates([fallbackUpdate]);
+    return [fallbackUpdate];
 }
 
 export function savePlayardUpdates(updates: PlayardUpdateItem[]): void {
