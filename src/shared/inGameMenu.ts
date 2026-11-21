@@ -699,6 +699,12 @@ export function initPlayardMenu(options?: PlayardMenuOptions) {
 
     document.getElementById('btn-playard-leave')?.addEventListener('click', () => {
         cleanupPresence();
+        if (window.parent && window.parent !== window) {
+            try {
+                window.parent.postMessage({ type: 'PLAYARD_LEAVE_GAME' }, '*');
+                return;
+            } catch (e) {}
+        }
         window.location.href = hubUrl;
     });
 

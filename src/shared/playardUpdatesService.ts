@@ -41,8 +41,9 @@ if (typeof window !== 'undefined' && window.localStorage) {
         if (!localStorage.getItem(OWNER_DATA_WIPED_KEY)) {
             // Eemalda eelmised tehislikult loodud kategooriad
             localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify([]));
-            // Kui uuendusi pole, lisa ametlik avaldatud uuendus
+            // Kui uuendusi pole või lisame In-Hub mängimise uuenduse
             const existingUpdates = JSON.parse(localStorage.getItem(UPDATES_STORAGE_KEY) || '[]');
+            const inHubUpdateId = 'update_playard_in_hub_play';
             if (!Array.isArray(existingUpdates) || existingUpdates.length === 0) {
                 const initialUpdate: PlayardUpdateItem = {
                     id: 'update_playard_2_0_launch',
@@ -56,7 +57,33 @@ if (typeof window !== 'undefined' && window.localStorage) {
                     publishedAt: Date.now(),
                     author: 'Playard Owner'
                 };
-                localStorage.setItem(UPDATES_STORAGE_KEY, JSON.stringify([initialUpdate]));
+                const inHubUpdate: PlayardUpdateItem = {
+                    id: inHubUpdateId,
+                    projectId: 'global',
+                    projectTitle: 'Üldine Playard',
+                    title: 'Mängimine otse Hubis (Neti lehekülg ei muutu)',
+                    description: 'Kõik mängud avanevad otse Hubi sees ilma brauseri URL-i või veebilehte vahetamata ning sealt saab sujuvalt tagasi tulla.',
+                    version: 'v2.1',
+                    status: 'published',
+                    createdAt: Date.now(),
+                    publishedAt: Date.now(),
+                    author: 'Playard Owner'
+                };
+                localStorage.setItem(UPDATES_STORAGE_KEY, JSON.stringify([inHubUpdate, initialUpdate]));
+            } else if (!existingUpdates.some((u: any) => u.id === inHubUpdateId)) {
+                existingUpdates.unshift({
+                    id: inHubUpdateId,
+                    projectId: 'global',
+                    projectTitle: 'Üldine Playard',
+                    title: 'Mängimine otse Hubis (Neti lehekülg ei muutu)',
+                    description: 'Kõik mängud avanevad otse Hubi sees ilma brauseri URL-i või veebilehte vahetamata ning sealt saab sujuvalt tagasi tulla.',
+                    version: 'v2.1',
+                    status: 'published',
+                    createdAt: Date.now(),
+                    publishedAt: Date.now(),
+                    author: 'Playard Owner'
+                });
+                localStorage.setItem(UPDATES_STORAGE_KEY, JSON.stringify(existingUpdates));
             }
             localStorage.setItem(OWNER_DATA_WIPED_KEY, 'true');
         }

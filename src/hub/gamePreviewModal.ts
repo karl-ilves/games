@@ -892,6 +892,55 @@ export function closeGamePreviewModal() {
     currentOpenedGame = null;
 }
 
+export function launchInHubGameContainer(gameUrl: string, title?: string): HTMLElement {
+    let container = document.getElementById('playard-in-hub-game-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'playard-in-hub-game-container';
+        container.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            z-index: 100000;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        `;
+        document.body.appendChild(container);
+    }
+
+    container.innerHTML = `
+        <div id="playard-in-hub-bar" style="position: absolute; top: 12px; left: 16px; z-index: 100001; display: flex; align-items: center; gap: 10px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; border: 1.5px solid rgba(0, 242, 254, 0.4); box-shadow: 0 4px 20px rgba(0,0,0,0.6);">
+            <div style="width: 22px; height: 22px; border-radius: 6px; background: #00f2fe; color: #000; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.8rem;">P</div>
+            <span style="color: #ffffff; font-weight: 700; font-size: 0.85rem; font-family: sans-serif;">${title || 'Playard Mäng'}</span>
+            <button id="btn-in-hub-exit" style="background: rgba(255, 71, 87, 0.2); border: 1px solid #ff4757; color: #ff6b81; font-weight: 800; font-size: 0.75rem; padding: 3px 10px; border-radius: 12px; cursor: pointer; transition: all 0.2s;" title="Välju Hubi">🚪 Välju Hubi</button>
+        </div>
+        <iframe id="playard-in-hub-frame" src="${gameUrl}" style="width: 100%; height: 100%; border: none; flex: 1;" allow="fullscreen; autoplay; gamepad"></iframe>
+    `;
+
+    container.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    const exitBtn = document.getElementById('btn-in-hub-exit');
+    if (exitBtn) {
+        exitBtn.onclick = () => closeInHubGameContainer();
+    }
+
+    return container;
+}
+
+export function closeInHubGameContainer() {
+    const container = document.getElementById('playard-in-hub-game-container');
+    if (container) {
+        container.innerHTML = '';
+        container.style.display = 'none';
+    }
+    document.body.style.overflow = '';
+}
+
 function resolveGameInfoFromCard(card: HTMLElement): GamePreviewInfo | null {
     // 1. Check data-game-id attribute (e.g. recently played cards)
     const dataId = card.getAttribute('data-game-id');
@@ -1021,9 +1070,19 @@ export function setupGamePreviewModal() {
             }
 
             refreshGamePreviewStatsUI(game.id);
-            window.location.href = game.url;
+            closeGamePreviewModal();
+
+            // Zero URL navigation - launch directly inside Hub container!
+            launchInHubGameContainer(game.url, game.title);
         });
     }
+
+    // Listen for postMessage from games (e.g. Leave to Hub in embedded container)
+    window.addEventListener('message', (event) => {
+        if (event && event.data && event.data.type === 'PLAYARD_LEAVE_GAME') {
+            closeInHubGameContainer();
+        }
+    });
 
     // Also listen for `playard_game_played` and `playard_friends_updated` to keep unique & active player counts up to date
     window.addEventListener('playard_game_played', (evt: any) => {
@@ -1089,7 +1148,9 @@ export function setupGamePreviewModal() {
             getGameStats,
             toggleGameLike,
             recordUniquePlayerPlay,
-            refreshGamePreviewStatsUI
+            refreshGamePreviewStatsUI,
+            launchInHubGameContainer,
+            closeInHubGameContainer
         };
     }
 }

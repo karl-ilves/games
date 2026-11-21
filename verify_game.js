@@ -16829,6 +16829,51 @@ await (async () => {
             }
             console.log("   ✅ 🐱 PAdmin Special Mode (All white background, top logout button, 1/7/30 dots, gender hover tooltips & games chart) verified successfully!");
 
+            // 40. Testing In-Hub Game Container (Play game without URL/page navigation & exit back to hub)
+            console.log("40. Testing In-Hub Game Container (Play game without page navigation)...");
+            const inHubPlayResult = await page.evaluate(async () => {
+                const initialUrl = window.location.href;
+
+                // Launch a game container directly via gamePreviewModal API
+                if (!window.gamePreviewModal || !window.gamePreviewModal.launchInHubGameContainer) {
+                    return { hasApi: false };
+                }
+
+                window.gamePreviewModal.launchInHubGameContainer('./games/citycar/index.html', 'Linnasõit 3D');
+                await new Promise(r => setTimeout(r, 100));
+
+                const container = document.getElementById('playard-in-hub-game-container');
+                const isContainerVisible = !!container && window.getComputedStyle(container).display === 'flex';
+                const iframe = document.getElementById('playard-in-hub-frame');
+                const hasIframe = !!iframe && (iframe.src || '').includes('citycar');
+                const exitBtn = document.getElementById('btn-in-hub-exit');
+                const hasExitBtn = !!exitBtn;
+
+                const urlAfterLaunch = window.location.href;
+                const urlStayedSame = (initialUrl === urlAfterLaunch);
+
+                // Exit container
+                exitBtn?.click();
+                await new Promise(r => setTimeout(r, 100));
+
+                const containerAfterExit = document.getElementById('playard-in-hub-game-container');
+                const isClosed = !containerAfterExit || window.getComputedStyle(containerAfterExit).display === 'none';
+
+                return {
+                    hasApi: true,
+                    isContainerVisible,
+                    hasIframe,
+                    hasExitBtn,
+                    urlStayedSame,
+                    isClosed
+                };
+            });
+            console.log("   In-Hub Play Test Results:", inHubPlayResult);
+            if (!inHubPlayResult.hasApi || !inHubPlayResult.isContainerVisible || !inHubPlayResult.hasIframe || !inHubPlayResult.hasExitBtn || !inHubPlayResult.urlStayedSame || !inHubPlayResult.isClosed) {
+                throw new Error("In-Hub Game Container test failed: " + JSON.stringify(inHubPlayResult));
+            }
+            console.log("   ✅ In-Hub Game Container (zero URL change, in-hub gameplay & exit back) verified successfully!");
+
             console.log("✅ All Playard Platform tests passed successfully!");
             process.exit(0);
         } catch(err) { console.error("Verification failed:", err ? (err.stack || err) : err); process.exit(1); } finally { await browser?.close(); if (previewServer?.httpServer) { await new Promise(r => previewServer.httpServer.close(r)); } }
