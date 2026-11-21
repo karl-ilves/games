@@ -475,6 +475,32 @@ export async function banPlayerFromPlayard(target: {
                 }
             }
 
+            // Remove verified email from playard_user_verified_emails
+            try {
+                const rawV = localStorage.getItem('playard_user_verified_emails');
+                if (rawV) {
+                    const mapV = JSON.parse(rawV);
+                    let changedV = false;
+                    for (const u of Array.from(usernames)) {
+                        if (mapV[u]) { delete mapV[u]; changedV = true; }
+                    }
+                    if (changedV) localStorage.setItem('playard_user_verified_emails', JSON.stringify(mapV));
+                }
+            } catch (e) {}
+
+            // Remove credentials from playard_known_player_passwords
+            try {
+                const rawC = localStorage.getItem('playard_known_player_passwords');
+                if (rawC) {
+                    const mapC = JSON.parse(rawC);
+                    let changedC = false;
+                    for (const u of Array.from(usernames)) {
+                        if (mapC[u]) { delete mapC[u]; changedC = true; }
+                    }
+                    if (changedC) localStorage.setItem('playard_known_player_passwords', JSON.stringify(mapC));
+                }
+            } catch (e) {}
+
             // Also clean banned player out of other players' friend lists & requests
             if (key.startsWith('playard_friends_')) {
                 try {
@@ -2087,10 +2113,10 @@ export async function renderOwnerPanelPlayersList(searchQuery: string = '') {
         `;
 
         let actionHtml = '';
-        if (ownerPanelMode === 'playbux') {
-            actionHtml = playbuxActions;
-        } else if (isOwner) {
+        if (isOwner) {
             actionHtml = `<span style="background: rgba(255, 211, 42, 0.15); border: 1px solid rgba(255, 211, 42, 0.5); color: #ffd32a; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 800;">👑 Playard Owner ✔ (Kaitstud)</span>`;
+        } else if (ownerPanelMode === 'playbux') {
+            actionHtml = playbuxActions;
         } else if (ownerPanelMode === 'verify') {
             actionHtml = verifiedToggleBtn;
         } else {
