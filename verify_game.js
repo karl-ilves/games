@@ -16808,6 +16808,16 @@ await (async () => {
                 const padminListHtml = document.getElementById('padmin-updates-card')?.innerHTML || '';
                 const notInPAdminList = !padminListHtml.includes('PAdmin Proposal');
 
+                // Test Serverid Tab
+                const serversTabBtn = document.querySelector('.padmin-tab-btn[data-tab="servers"]');
+                const hasServersTab = !!serversTabBtn;
+                serversTabBtn?.click();
+                await new Promise(r => setTimeout(r, 200));
+                const serversCard = document.getElementById('padmin-servers-card');
+                const hasServersCard = !!serversCard;
+                const hasServerImage = !!document.getElementById('padmin-server-image');
+                const hasServerContainer = !!document.getElementById('padmin-server-image-container');
+
                 // Switch back to Analytics Tab -> Shows #padmin-stats-card again
                 const analyticsTabBtnBack = document.querySelector('.padmin-tab-btn[data-tab="analytics"]');
                 analyticsTabBtnBack?.click();
@@ -16823,6 +16833,10 @@ await (async () => {
                     hasAccountsCard: !!accountsCard,
                     hasGamesCard: !!gamesCard,
                     hasCategoryTabs,
+                    hasServersTab,
+                    hasServersCard,
+                    hasServerImage,
+                    hasServerContainer,
                     categoryTabs,
                     hasUpdatesCard,
                     statsCardHiddenOnUpdates,
@@ -16849,7 +16863,7 @@ await (async () => {
                 };
             });
             console.log("   PAdmin Active State:", padminState);
-            if (!padminState.isPAdminMode || !padminState.hasLogoutBtn || !padminState.logoutBtnStillPresent || !padminState.hasAccountsCard || !padminState.hasGamesCard || !padminState.hasEmailsCard || padminState.todayDots !== 1 || padminState.weekDots !== 7 || padminState.monthDots !== 30 || !padminState.tooltipVisible || !padminState.hasCategoryTabs || !padminState.hasUpdatesCard || !padminState.statsCardHiddenOnUpdates || !padminState.statsCardBack || !padminState.hasAddUpdateCard || !padminState.hasTimelineOverlay || !padminState.timelineClosed || !padminState.isPolished || !padminState.notInPAdminList || !padminState.hasEmailStatsBox || !padminState.hasEmailsSentVal || !padminState.hasEmailsRemainingVal) {
+            if (!padminState.isPAdminMode || !padminState.hasLogoutBtn || !padminState.logoutBtnStillPresent || !padminState.hasAccountsCard || !padminState.hasGamesCard || !padminState.hasEmailsCard || padminState.todayDots !== 1 || padminState.weekDots !== 7 || padminState.monthDots !== 30 || !padminState.tooltipVisible || !padminState.hasCategoryTabs || !padminState.hasUpdatesCard || !padminState.statsCardHiddenOnUpdates || !padminState.statsCardBack || !padminState.hasAddUpdateCard || !padminState.hasTimelineOverlay || !padminState.timelineClosed || !padminState.isPolished || !padminState.notInPAdminList || !padminState.hasEmailStatsBox || !padminState.hasEmailsSentVal || !padminState.hasEmailsRemainingVal || !padminState.hasServersTab || !padminState.hasServersCard || !padminState.hasServerImage) {
                 throw new Error("PAdmin Special Mode activation or Update Submission failed: " + JSON.stringify(padminState));
             }
 
