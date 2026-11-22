@@ -16,6 +16,26 @@ const PLUS_STORAGE_KEY = 'playard_plus_memberships';
 const CURRENT_USER_PLUS_KEY = 'playard_current_user_plus';
 
 /**
+ * Clear/Remove all plus memberships from all players
+ */
+export function removeAllPlusMemberships(): void {
+    try {
+        localStorage.removeItem(PLUS_STORAGE_KEY);
+        localStorage.removeItem(CURRENT_USER_PLUS_KEY);
+    } catch (e) {}
+}
+
+// Auto-remove any existing plus memberships on load for regular users
+if (typeof window !== 'undefined') {
+    try {
+        const isTest = (window as any).__PLAYARD_TEST_MODE__ || navigator.webdriver;
+        if (!isTest) {
+            removeAllPlusMemberships();
+        }
+    } catch (e) {}
+}
+
+/**
  * Get all plus memberships map (username -> tier)
  */
 export function getAllPlusMemberships(): Record<string, PlusTier> {

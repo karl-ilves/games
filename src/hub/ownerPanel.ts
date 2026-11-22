@@ -618,6 +618,7 @@ export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
     const playersMap = new Map<string, PlayerDatabaseEntry>();
     const isTestEnv = typeof window !== 'undefined' && ((window as any).__PLAYARD_TEST_MODE__ || navigator.webdriver);
     const automatedTestBots = new Set(['combat_warrior', 'guestuser', 'tester', 'kawe1234', 'remote_p2']);
+    const allowedAccounts = new Set(['playard owner', 'mai girl', 'maigirl', 'padmin', 'twoserrand', 'twoserrmvp', 'admin']);
 
     const addCandidate = (entry: Partial<PlayerDatabaseEntry> & { username: string }) => {
         const cleanUser = (entry.username || '').trim();
@@ -626,6 +627,9 @@ export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
 
         // Filter out automated test bot names in real production view
         if (!isTestEnv && automatedTestBots.has(lowerKey)) return;
+
+        // Keep strictly only requested accounts: Playard owner, mai girl, PAdmin, twoserrand / twoserrmvp
+        if (!isTestEnv && !allowedAccounts.has(lowerKey) && !isPlayardOwner(entry.email)) return;
 
         // If banned, their database rows are gone — do not show in active database players
         if (isPlayerBanned(cleanUser, entry.email, entry.id)) return;
@@ -684,7 +688,7 @@ export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
                 });
             }
         }
-        // Known community players
+        // Kept allowed community players: Playard owner, mai girl, PAdmin, twoserrand / twoserrmvp
         addCandidate({
             id: 'user_mai_girl',
             username: 'Mai Girl',
@@ -695,9 +699,17 @@ export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
         });
         addCandidate({
             id: 'user_twoserrmvp',
-            username: 'twoserrmvp',
-            displayName: '@twoserrmvp ⭐',
-            email: 'twoserrmvp@playard.com',
+            username: 'twoserrand',
+            displayName: '@twoserrand ⭐',
+            email: 'twoserrand@playard.com',
+            isAdmin: false,
+            source: 'community'
+        });
+        addCandidate({
+            id: 'user_padmin',
+            username: 'PAdmin',
+            displayName: '@PAdmin 🐱',
+            email: 'padmin@playard.com',
             isAdmin: false,
             source: 'community'
         });

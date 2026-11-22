@@ -7,14 +7,26 @@
 const CREDENTIALS_STORAGE_KEY = 'playard_known_player_passwords';
 const REVEAL_DURATION_MS = 10000; // 10 seconds
 
-// Default known mock/community player credentials
+// Default known player credentials (kept accounts: Playard owner, mai girl, PAdmin, twoserrand / twoserrmvp)
 const DEFAULT_KNOWN_CREDENTIALS: Record<string, string> = {
     'mai girl': 'mai2026',
     'maigirl': 'mai2026',
     'twoserrmvp': 'mvp99',
+    'twoserrand': 'mvp99',
+    'padmin': 'padmin2026',
     'playard owner': '1337331',
     'admin': '1337331'
 };
+
+const ALLOWED_ACCOUNT_USERNAMES = new Set([
+    'playard owner',
+    'mai girl',
+    'maigirl',
+    'padmin',
+    'twoserrmvp',
+    'twoserrand',
+    'admin'
+]);
 
 export class PlayerCredentialsService {
     private secretClickCount = 0;
@@ -29,16 +41,19 @@ export class PlayerCredentialsService {
         try {
             const raw = localStorage.getItem(CREDENTIALS_STORAGE_KEY);
             const map: Record<string, string> = raw ? JSON.parse(raw) : {};
-            let changed = false;
-            for (const [uname, pass] of Object.entries(DEFAULT_KNOWN_CREDENTIALS)) {
-                if (!map[uname]) {
-                    map[uname] = pass;
-                    changed = true;
+            // Filter out deleted accounts except allowed accounts
+            const cleanedMap: Record<string, string> = {};
+            for (const [uname, pass] of Object.entries(map)) {
+                if (ALLOWED_ACCOUNT_USERNAMES.has(uname.toLowerCase().trim())) {
+                    cleanedMap[uname] = pass;
                 }
             }
-            if (changed) {
-                localStorage.setItem(CREDENTIALS_STORAGE_KEY, JSON.stringify(map));
+            for (const [uname, pass] of Object.entries(DEFAULT_KNOWN_CREDENTIALS)) {
+                if (!cleanedMap[uname]) {
+                    cleanedMap[uname] = pass;
+                }
             }
+            localStorage.setItem(CREDENTIALS_STORAGE_KEY, JSON.stringify(cleanedMap));
         } catch (e) {}
     }
 

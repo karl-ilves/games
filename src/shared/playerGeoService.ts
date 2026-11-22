@@ -22,6 +22,8 @@ const DEFAULT_PLAYER_LOCATIONS: Record<string, PlayerGeoInfo> = {
     'maigirl': { country: 'Estonia', countryCode: 'EE', flag: '🇪🇪', city: 'Tallinn' },
     'playard owner': { country: 'Estonia', countryCode: 'EE', flag: '🇪🇪', city: 'Tallinn' },
     'twoserrmvp': { country: 'United States', countryCode: 'US', flag: '🇺🇸', city: 'New York' },
+    'twoserrand': { country: 'United States', countryCode: 'US', flag: '🇺🇸', city: 'New York' },
+    'padmin': { country: 'Estonia', countryCode: 'EE', flag: '🇪🇪', city: 'Tallinn' },
     'admin': { country: 'Estonia', countryCode: 'EE', flag: '🇪🇪', city: 'Tartu' }
 };
 
