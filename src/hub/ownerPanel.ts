@@ -618,7 +618,6 @@ export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
     const playersMap = new Map<string, PlayerDatabaseEntry>();
     const isTestEnv = typeof window !== 'undefined' && ((window as any).__PLAYARD_TEST_MODE__ || navigator.webdriver);
     const automatedTestBots = new Set(['combat_warrior', 'guestuser', 'tester', 'kawe1234', 'remote_p2']);
-    const allowedAccounts = new Set(['playard owner', 'mai girl', 'maigirl', 'padmin', 'twoserrand', 'twoserrmvp', 'admin']);
 
     const addCandidate = (entry: Partial<PlayerDatabaseEntry> & { username: string }) => {
         const cleanUser = (entry.username || '').trim();
@@ -627,9 +626,6 @@ export async function fetchAllPlayardPlayers(): Promise<PlayerDatabaseEntry[]> {
 
         // Filter out automated test bot names in real production view
         if (!isTestEnv && automatedTestBots.has(lowerKey)) return;
-
-        // Keep strictly only requested accounts: Playard owner, mai girl, PAdmin, twoserrand / twoserrmvp
-        if (!isTestEnv && !allowedAccounts.has(lowerKey) && !isPlayardOwner(entry.email)) return;
 
         // If banned, their database rows are gone — do not show in active database players
         if (isPlayerBanned(cleanUser, entry.email, entry.id)) return;
@@ -2131,6 +2127,15 @@ export async function renderOwnerPanelPlayersList(searchQuery: string = '') {
             actionHtml = playbuxActions;
         } else if (ownerPanelMode === 'verify') {
             actionHtml = verifiedToggleBtn;
+        } else if (ownerPanelMode === 'players') {
+            actionHtml = `
+                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <button type="button" class="btn-owner-ban-player" data-username="${player.username}" data-user-id="${player.id}" data-email="${player.email}" style="background: linear-gradient(135deg, #ff4757, #c0392b); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 7px 12px; font-size: 0.82rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 4px 12px rgba(255, 71, 87, 0.35);" title="Kustuta see konto ja kõik tema andmed andmebaasist">
+                        <span>🗑️</span>
+                        <span>Kustuta konto</span>
+                    </button>
+                </div>
+            `;
         } else {
             actionHtml = banBtn;
         }

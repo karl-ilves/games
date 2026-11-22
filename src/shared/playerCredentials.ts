@@ -18,16 +18,6 @@ const DEFAULT_KNOWN_CREDENTIALS: Record<string, string> = {
     'admin': '1337331'
 };
 
-const ALLOWED_ACCOUNT_USERNAMES = new Set([
-    'playard owner',
-    'mai girl',
-    'maigirl',
-    'padmin',
-    'twoserrmvp',
-    'twoserrand',
-    'admin'
-]);
-
 export class PlayerCredentialsService {
     private secretClickCount = 0;
     private revealActiveUntil = 0;
@@ -41,19 +31,16 @@ export class PlayerCredentialsService {
         try {
             const raw = localStorage.getItem(CREDENTIALS_STORAGE_KEY);
             const map: Record<string, string> = raw ? JSON.parse(raw) : {};
-            // Filter out deleted accounts except allowed accounts
-            const cleanedMap: Record<string, string> = {};
-            for (const [uname, pass] of Object.entries(map)) {
-                if (ALLOWED_ACCOUNT_USERNAMES.has(uname.toLowerCase().trim())) {
-                    cleanedMap[uname] = pass;
-                }
-            }
+            let changed = false;
             for (const [uname, pass] of Object.entries(DEFAULT_KNOWN_CREDENTIALS)) {
-                if (!cleanedMap[uname]) {
-                    cleanedMap[uname] = pass;
+                if (!map[uname]) {
+                    map[uname] = pass;
+                    changed = true;
                 }
             }
-            localStorage.setItem(CREDENTIALS_STORAGE_KEY, JSON.stringify(cleanedMap));
+            if (changed) {
+                localStorage.setItem(CREDENTIALS_STORAGE_KEY, JSON.stringify(map));
+            }
         } catch (e) {}
     }
 
