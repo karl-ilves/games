@@ -156,32 +156,42 @@ export class ForgotPasswordService {
             const isTestEmail = cleanEmail.endsWith('@example.com') || (typeof window !== 'undefined' && (window as any).__PLAYARD_IS_TESTING__);
             if (!isTestEmail) {
                 const detailedActivationMessage =
-`Tere, kallis Playardi mängija!
+`Hello, dear Playard player!
 
-Alustasid oma Playard Games kontole "${cleanUser}" funktsiooni "Forgot Password" (Unustasid parooli) aktiveerimist.
+You have requested to activate "Forgot Password" protection for your Playard Games account "${cleanUser}".
 
 --------------------------------------------------
-🔑 SINU 6-KOHALINE KINNITUSKOOD ON:
+🔑 YOUR 6-DIGIT ACTIVATION CODE IS:
 👉  ${code}  👈
 --------------------------------------------------
 
-KUIDAS SEDA KASUTADA:
-1. Ava Playardi lehel pooleli olev aken.
-2. Sisesta sinna ülaltoodud 6-kohaline kinnituskood: ${code}
-3. Vajuta rohelisele nupule "✅ Kinnita & Aktiveeri".
+HOW TO USE IT:
+1. Return to the open activation window on Playard Games.
+2. Enter your 6-digit confirmation code: ${code}
+3. Click "✅ Confirm & Activate".
 
-Pärast koodi kinnitamist on sinu e-mail "${cleanEmail}" turvaliselt seotud kontoga "${cleanUser}". Kui peaksid kunagi oma parooli unustama, saad selle alati mugavalt oma meilile tellida!
+Once activated, your email "${cleanEmail}" is securely linked to your account "${cleanUser}". If you ever forget your password, you can easily reset it using this code!
 
-Kood kehtib 15 minutit. Kui sa ei taotlenud seda koodi, võid seda kirja julgelt eirata.
+This code expires in 15 minutes. If you did not request this, you can safely ignore this email.
 
-Parimate soovidega,
-Playard Games tiim
+Best regards,
+The Playard Games Team
 https://www.playardgames.com`;
 
                 const templateParams = {
+                    from_name: 'Playard Games',
+                    sender_name: 'Playard Games',
+                    to_name: cleanUser,
                     to_email: cleanEmail,
-                    subject: `Playard Games - Sinu 6-kohaline kinnituskood: ${code}`,
+                    email: cleanEmail,
+                    user_email: cleanEmail,
+                    recipient: cleanEmail,
+                    reply_to: cleanEmail,
+                    username: cleanUser,
+                    user_name: cleanUser,
+                    subject: `Playard Games - Your 6-digit Activation Code: ${code}`,
                     passcode: code,
+                    password: code,
                     message: detailedActivationMessage
                 };
 
@@ -327,27 +337,30 @@ https://www.playardgames.com`;
             const isTestEmail = targetEmail.endsWith('@example.com') || (typeof window !== 'undefined' && (window as any).__PLAYARD_IS_TESTING__);
             if (!isTestEmail) {
                 const detailedMessage =
-`Tere, kallis Playardi mängija!
+`Hello, dear Playard player!
 
-Alustasid oma Playard Games kontole "${cleanUser}" parooli vahetamist ("Forgot Password").
+You are resetting your password for your Playard Games account "${cleanUser}".
 
 --------------------------------------------------
-🔑 SINU 6-KOHALINE TAASTAMISKOOD ON:
+🔑 YOUR 6-DIGIT RECOVERY CODE IS:
 👉  ${code}  👈
 --------------------------------------------------
 
-KUIDAS SEDA KASUTADA:
-1. Ava Playardi lehel pooleli olev "Forgot Password" aken.
-2. Sisesta sinna ülaltoodud 6-kohaline kood: ${code}
-3. Vajuta "✅ Kinnita Kood" ning sisesta oma uus parool!
+HOW TO USE IT:
+1. Return to the "Forgot Password" modal on Playard Games.
+2. Enter your 6-digit recovery code: ${code}
+3. Click "✅ Confirm Code" and choose your new password!
 
-Kood kehtib 15 minutit. Kui sa ei taotlenud parooli vahetust, võid seda kirja julgelt eirata.
+This code expires in 15 minutes. If you did not request a password reset, you can safely ignore this email.
 
-Parimate soovidega,
-Playard Games tiim
+Best regards,
+The Playard Games Team
 https://www.playardgames.com`;
 
                 const templateParams = {
+                    from_name: 'Playard Games',
+                    sender_name: 'Playard Games',
+                    to_name: cleanUser,
                     to_email: targetEmail,
                     email: targetEmail,
                     user_email: targetEmail,
@@ -355,7 +368,7 @@ https://www.playardgames.com`;
                     reply_to: targetEmail,
                     username: cleanUser,
                     user_name: cleanUser,
-                    subject: `Playard Games - Sinu 6-kohaline kood parooli taastamiseks: ${code}`,
+                    subject: `Playard Games - Your 6-digit Password Reset Code: ${code}`,
                     passcode: code,
                     password: code,
                     message: detailedMessage

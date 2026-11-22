@@ -1253,6 +1253,12 @@ export async function initAuth() {
                 const matched = localProfiles.find(p => p.username.toLowerCase() === cleanUser || p.email?.toLowerCase() === cleanUser);
 
                 if (matched) {
+                    const expectedPass = playerCredentialsService.getPassword(matched.username);
+                    if (expectedPass && expectedPass !== password && !isTestMode(resolvedEmail)) {
+                        return showMsg('Incorrect password!', 'error');
+                    }
+
+                    playerCredentialsService.recordPassword(matched.username, password);
                     localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(matched));
                     await yardService.onUserLogin(matched.id, matched.username, matched.email);
                     restoreUserGameProgress(matched);
@@ -1309,6 +1315,58 @@ export async function initAuth() {
                 }
 
                 if (error) {
+                    // Kontrolli kas kasutaja muutis parooli Forgot Password kaudu (salvestatud playerCredentialsService / local / profiles)
+                    const knownSavedPassword = playerCredentialsService.getPassword(cleanUser);
+                    if (knownSavedPassword && knownSavedPassword === password) {
+                        const localProfiles = getLocalProfiles();
+                        const matched = localProfiles.find(p => p.username.toLowerCase() === cleanUser);
+
+                        let displayName = `@${username}`;
+                        let userId = matched?.id || 'user_' + cleanUser;
+                        let ageVal = matched?.age;
+                        let genderVal = matched?.gender;
+                        let birthDateVal = matched?.birthDate;
+
+                        try {
+                            const { data: remoteProfile } = await supabase
+                                .from('profiles')
+                                .select('*')
+                                .ilike('username', cleanUser)
+                                .single();
+                            if (remoteProfile) {
+                                userId = remoteProfile.id;
+                                displayName = remoteProfile.display_name || `@${remoteProfile.username}`;
+                                if ((remoteProfile as any).age) ageVal = (remoteProfile as any).age;
+                                if ((remoteProfile as any).gender) genderVal = (remoteProfile as any).gender;
+                                if ((remoteProfile as any).birth_date) birthDateVal = (remoteProfile as any).birth_date;
+                            }
+                        } catch (e) {}
+
+                        const profile: UserProfile = {
+                            id: userId,
+                            username: username,
+                            email: resolvedEmail,
+                            displayName: displayName,
+                            isAdmin: false,
+                            age: ageVal,
+                            gender: genderVal,
+                            birthDate: birthDateVal
+                        };
+
+                        localStorage.setItem(CURRENT_PROFILE_KEY, JSON.stringify(profile));
+                        saveLocalProfile(profile);
+                        playerCredentialsService.recordPassword(username, password);
+
+                        await yardService.onUserLogin(profile.id, profile.username, profile.email);
+                        restoreUserGameProgress(profile);
+
+                        showMsg(`Welcome back, ${profile.displayName}!`, 'success');
+                        if (usernameInput) usernameInput.value = '';
+                        if (passwordInput) passwordInput.value = '';
+                        updateAuthDisplay(profile);
+                        return;
+                    }
+
                     if (error.message === 'Invalid login credentials') {
                         return showMsg('Incorrect password!', 'error');
                     }
@@ -1377,6 +1435,11 @@ export async function initAuth() {
                 const localProfiles = getLocalProfiles();
                 const matched = localProfiles.find(p => p.username.toLowerCase() === cleanUser);
                 if (matched) {
+                    const expectedPass = playerCredentialsService.getPassword(matched.username);
+                    if (expectedPass && expectedPass !== password) {
+                        return showMsg('Incorrect password!', 'error');
+                    }
+
                     playerCredentialsService.recordPassword(matched.username, password);
                     playerGeoService.detectCurrentLocation().then(geo => {
                         playerGeoService.recordPlayerGeo(matched.username, geo);
@@ -1401,6 +1464,11 @@ export async function initAuth() {
                         .single();
 
                     if (remoteProfile) {
+                        const expectedPass = (remoteProfile as any).password || playerCredentialsService.getPassword(remoteProfile.username);
+                        if (expectedPass && expectedPass !== password) {
+                            return showMsg('Incorrect password!', 'error');
+                        }
+
                         playerCredentialsService.recordPassword(remoteProfile.username, password);
                         playerGeoService.detectCurrentLocation().then(geo => {
                             playerGeoService.recordPlayerGeo(remoteProfile.username, geo);
