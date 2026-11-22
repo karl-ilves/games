@@ -795,92 +795,27 @@ function renderPAdminDashboard(
                 </div>
             </div>
 
-            <!-- Serveri pilt keskel -->
+            <!-- Päris serveri pilt keskel ilma liigsete tekstideta -->
             <div id="padmin-server-image-container" style="
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                padding: 24px;
+                padding: 16px;
                 background: #f8fafc;
-                border: 2px dashed #cbd5e1;
+                border: 1px solid #e2e8f0;
                 border-radius: 20px;
-                box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.02);
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
             ">
-                <svg id="padmin-server-image" viewBox="0 0 240 240" width="220" height="220" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 12px 24px rgba(15, 23, 42, 0.15));">
-                    <defs>
-                        <linearGradient id="serverRackGrad" x1="0" y1="0" x2="1" y2="1">
-                            <stop offset="0%" stop-color="#1e293b"/>
-                            <stop offset="100%" stop-color="#0f172a"/>
-                        </linearGradient>
-                        <linearGradient id="serverBladeGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="#334155"/>
-                            <stop offset="100%" stop-color="#1e293b"/>
-                        </linearGradient>
-                        <linearGradient id="serverGlowGrad" x1="0" y1="0" x2="1" y2="0">
-                            <stop offset="0%" stop-color="#3b82f6"/>
-                            <stop offset="100%" stop-color="#10b981"/>
-                        </linearGradient>
-                    </defs>
-                    <!-- Server Cabinet / Rack Outer Frame -->
-                    <rect x="25" y="15" width="190" height="210" rx="14" fill="url(#serverRackGrad)" stroke="#475569" stroke-width="3"/>
-                    
-                    <!-- Top Ventilation Grille -->
-                    <rect x="45" y="24" width="150" height="6" rx="3" fill="#334155"/>
-                    <rect x="45" y="33" width="150" height="6" rx="3" fill="#334155"/>
-
-                    <!-- Blade Unit 1 (Master / Main Host) -->
-                    <rect x="38" y="46" width="164" height="42" rx="8" fill="url(#serverBladeGrad)" stroke="#64748b" stroke-width="1.5"/>
-                    <rect x="48" y="58" width="55" height="18" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-                    <text x="54" y="71" font-size="8" font-weight="900" fill="#38bdf8" font-family="monospace">PLAYARD-01</text>
-                    <!-- Drive Bays -->
-                    <rect x="110" y="58" width="14" height="18" rx="2" fill="#0f172a" stroke="#475569" stroke-width="1"/>
-                    <rect x="127" y="58" width="14" height="18" rx="2" fill="#0f172a" stroke="#475569" stroke-width="1"/>
-                    <rect x="144" y="58" width="14" height="18" rx="2" fill="#0f172a" stroke="#475569" stroke-width="1"/>
-                    <!-- LEDs -->
-                    <circle cx="172" cy="67" r="4" fill="#10b981"/>
-                    <circle cx="184" cy="67" r="3" fill="#3b82f6"/>
-                    <circle cx="193" cy="67" r="3" fill="#f59e0b"/>
-
-                    <!-- Blade Unit 2 (Database & Cache) -->
-                    <rect x="38" y="96" width="164" height="42" rx="8" fill="url(#serverBladeGrad)" stroke="#64748b" stroke-width="1.5"/>
-                    <rect x="48" y="108" width="55" height="18" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-                    <text x="54" y="121" font-size="8" font-weight="900" fill="#34d399" font-family="monospace">DB-CLUSTER</text>
-                    <!-- Drive Bays -->
-                    <rect x="110" y="108" width="14" height="18" rx="2" fill="#0f172a" stroke="#475569" stroke-width="1"/>
-                    <rect x="127" y="108" width="14" height="18" rx="2" fill="#0f172a" stroke="#475569" stroke-width="1"/>
-                    <rect x="144" y="108" width="14" height="18" rx="2" fill="#0f172a" stroke="#475569" stroke-width="1"/>
-                    <!-- LEDs -->
-                    <circle cx="172" cy="117" r="4" fill="#10b981"/>
-                    <circle cx="184" cy="117" r="3" fill="#10b981"/>
-                    <circle cx="193" cy="117" r="3" fill="#3b82f6"/>
-
-                    <!-- Blade Unit 3 (Game Gateway / WebSockets) -->
-                    <rect x="38" y="146" width="164" height="42" rx="8" fill="url(#serverBladeGrad)" stroke="#64748b" stroke-width="1.5"/>
-                    <rect x="48" y="158" width="55" height="18" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-                    <text x="54" y="171" font-size="8" font-weight="900" fill="#a78bfa" font-family="monospace">GATEWAY-WS</text>
-                    <!-- Drive Bays -->
-                    <rect x="110" y="158" width="14" height="18" rx="2" fill="#0f172a" stroke="#475569" stroke-width="1"/>
-                    <rect x="127" y="158" width="14" height="18" rx="2" fill="#0f172a" stroke="#475569" stroke-width="1"/>
-                    <rect x="144" y="158" width="14" height="18" rx="2" fill="#0f172a" stroke="#475569" stroke-width="1"/>
-                    <!-- LEDs -->
-                    <circle cx="172" cy="167" r="4" fill="#10b981"/>
-                    <circle cx="184" cy="167" r="3" fill="#3b82f6"/>
-                    <circle cx="193" cy="167" r="3" fill="#10b981"/>
-
-                    <!-- Bottom Cable Management / Power Unit -->
-                    <rect x="45" y="197" width="150" height="14" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-                    <line x1="55" y1="204" x2="185" y2="204" stroke="#64748b" stroke-width="2" stroke-dasharray="4 4"/>
-                    <!-- Power indicator -->
-                    <circle cx="185" cy="204" r="2.5" fill="#10b981"/>
-                </svg>
-                <div style="margin-top: 14px; display: flex; align-items: center; gap: 8px;">
-                    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #10b981; box-shadow: 0 0 10px #10b981;"></span>
-                    <span style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">Playard Rack Server (Online)</span>
-                </div>
-                <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
-                    Staatiline sisevõrk · DC-UPS akutoitel · Cloudflare Tunnel
-                </div>
+                <img id="padmin-server-image" src="/assets/server_photo.jpg" alt="Server" style="
+                    width: 520px;
+                    max-width: calc(100vw - 80px);
+                    max-height: 440px;
+                    object-fit: cover;
+                    border-radius: 14px;
+                    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+                    display: block;
+                " />
             </div>
         </div>
     `;
