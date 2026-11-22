@@ -29,6 +29,64 @@ try {
 const PENDING_VERIFICATIONS_KEY = 'playard_pending_email_verifications';
 const USER_VERIFIED_EMAILS_KEY = 'playard_user_verified_emails';
 const USER_ACTIVATION_CODES_KEY = 'playard_user_activation_codes';
+const SENT_EMAILS_LOG_KEY = 'playard_sent_emails_log';
+export const EMAILJS_MONTHLY_QUOTA = 200;
+
+export interface SentEmailLogItem {
+    id: string;
+    type: 'activation' | 'recovery' | 'security_alert';
+    recipient: string;
+    username: string;
+    subject: string;
+    timestamp: number;
+}
+
+export function recordSentEmail(item: { type: 'activation' | 'recovery' | 'security_alert'; recipient: string; username: string; subject: string }): void {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+        const raw = localStorage.getItem(SENT_EMAILS_LOG_KEY);
+        const list: SentEmailLogItem[] = raw ? JSON.parse(raw) : [];
+        list.push({
+            id: 'mail_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+            ...item,
+            timestamp: Date.now()
+        });
+        localStorage.setItem(SENT_EMAILS_LOG_KEY, JSON.stringify(list));
+    } catch (e) {}
+}
+
+export function getSentEmailsLog(): SentEmailLogItem[] {
+    if (typeof window === 'undefined' || !window.localStorage) return [];
+    try {
+        const raw = localStorage.getItem(SENT_EMAILS_LOG_KEY);
+        if (raw) {
+            const list = JSON.parse(raw);
+            if (Array.isArray(list)) return list;
+        }
+    } catch (e) {}
+    return [];
+}
+
+export function getEmailStats(): { sentThisMonth: number; totalSent: number; limit: number; remaining: number } {
+    const list = getSentEmailsLog();
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    const sentThisMonth = list.filter(item => {
+        const d = new Date(item.timestamp);
+        return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+    }).length;
+
+    const remaining = Math.max(0, EMAILJS_MONTHLY_QUOTA - sentThisMonth);
+
+    return {
+        sentThisMonth,
+        totalSent: list.length,
+        limit: EMAILJS_MONTHLY_QUOTA,
+        remaining
+    };
+}
 
 export interface PendingVerification {
     username: string;
@@ -198,6 +256,12 @@ https://www.playardgames.com`;
 
                 await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
             }
+            recordSentEmail({
+                type: 'activation',
+                recipient: cleanEmail,
+                username: cleanUser,
+                subject: `Playard Games - Your 6-digit Activation Code: ${code}`
+            });
             return { success: true, code };
         } catch (err: any) {
             console.error('EmailJS send error:', err);
@@ -377,6 +441,12 @@ https://www.playardgames.com`;
 
                 await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
             }
+            recordSentEmail({
+                type: 'recovery',
+                recipient: targetEmail,
+                username: cleanUser,
+                subject: `Playard Games - Your 6-digit Password Reset Code: ${code}`
+            });
             return {
                 success: true,
                 code,
@@ -517,6 +587,12 @@ https://www.playardgames.com`;
 
                 await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_SECURITY_ALERT_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
             }
+            recordSentEmail({
+                type: 'security_alert',
+                recipient: targetEmail,
+                username: cleanUser,
+                subject: 'Security Alert: Your Playard Games password was changed'
+            });
             return { success: true };
         } catch (err: any) {
             console.error('EmailJS security alert error:', err);
