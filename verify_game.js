@@ -16842,13 +16842,14 @@ await (async () => {
                     monthDots,
                     tooltipVisible,
                     hasEmailStatsBox: !!document.getElementById('padmin-email-stats-box'),
+                    hasEmailsCard: !!document.getElementById('padmin-emails-card'),
                     hasEmailsSentVal: !!document.getElementById('padmin-emails-sent-val'),
                     hasEmailsRemainingVal: !!document.getElementById('padmin-emails-remaining-val'),
                     bodyBg
                 };
             });
             console.log("   PAdmin Active State:", padminState);
-            if (!padminState.isPAdminMode || !padminState.hasLogoutBtn || !padminState.logoutBtnStillPresent || !padminState.hasAccountsCard || !padminState.hasGamesCard || padminState.todayDots !== 1 || padminState.weekDots !== 7 || padminState.monthDots !== 30 || !padminState.tooltipVisible || !padminState.hasCategoryTabs || !padminState.hasUpdatesCard || !padminState.statsCardHiddenOnUpdates || !padminState.statsCardBack || !padminState.hasAddUpdateCard || !padminState.hasTimelineOverlay || !padminState.timelineClosed || !padminState.isPolished || !padminState.notInPAdminList || !padminState.hasEmailStatsBox || !padminState.hasEmailsSentVal || !padminState.hasEmailsRemainingVal) {
+            if (!padminState.isPAdminMode || !padminState.hasLogoutBtn || !padminState.logoutBtnStillPresent || !padminState.hasAccountsCard || !padminState.hasGamesCard || !padminState.hasEmailsCard || padminState.todayDots !== 1 || padminState.weekDots !== 7 || padminState.monthDots !== 30 || !padminState.tooltipVisible || !padminState.hasCategoryTabs || !padminState.hasUpdatesCard || !padminState.statsCardHiddenOnUpdates || !padminState.statsCardBack || !padminState.hasAddUpdateCard || !padminState.hasTimelineOverlay || !padminState.timelineClosed || !padminState.isPolished || !padminState.notInPAdminList || !padminState.hasEmailStatsBox || !padminState.hasEmailsSentVal || !padminState.hasEmailsRemainingVal) {
                 throw new Error("PAdmin Special Mode activation or Update Submission failed: " + JSON.stringify(padminState));
             }
 

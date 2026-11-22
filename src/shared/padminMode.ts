@@ -21,7 +21,11 @@
 import { getCurrentUserProfile } from '../auth';
 import { supabase } from '../lib/supabase';
 import { getPlayardUpdates, getPlayardProjects, PlayardUpdateItem, PlayardProject, polishAndCorrectText, addPlayardUpdate } from './playardUpdatesService';
-import { getEmailStats } from './forgotPasswordService';
+import { getEmailStats, getSentEmailsLog } from './forgotPasswordService';
+
+export function fetchEmailsData(): { createdAt: string }[] {
+    return getSentEmailsLog().map(m => ({ createdAt: new Date(m.timestamp).toISOString() }));
+}
 
 const PADMIN_STYLE_ID = 'padmin-whiteout-style';
 const PADMIN_CONTAINER_ID = 'padmin-special-container';
@@ -338,11 +342,13 @@ function renderPAdminDashboard(
     // Email stats (EmailJS saadetud sõnumid ja allesjäänud limiit)
     const emailStats = getEmailStats();
     const emailPercent = Math.min(100, Math.round((emailStats.sentThisMonth / emailStats.limit) * 100));
+    const emailRecords = fetchEmailsData();
+    const emailPoints = buildDailyPoints(emailRecords, period);
 
     // Analytics Card HTML
     const analyticsContentHtml = `
         <div id="padmin-stats-card" style="
-            width: 1060px;
+            width: 1220px;
             max-width: calc(100vw - 32px);
             background: #ffffff;
             border: 2px solid #e2e8f0;
@@ -408,7 +414,8 @@ function renderPAdminDashboard(
             </div>
 
             <!-- Side-by-Side Charts (Kontod vs Mängud) -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px;">
+            <!-- 3 Side-by-Side Charts (Kontod, Mängud ja E-mailid) -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
                 <!-- Chart 1: Uued kontod -->
                 <div id="padmin-accounts-card" style="
                     background: #f8fafc;
@@ -436,54 +443,6 @@ function renderPAdminDashboard(
 
                     <div style="background: #ffffff; border-radius: 14px; padding: 10px; border: 1px solid #e2e8f0;">
                         ${renderSingleChartSvg(accountPoints, 'accounts', '#2563eb', '#3b82f6')}
-                    </div>
-
-                    <!-- EmailJS saadetud sõnumite ja allesjäänud limiidi tabel/plokk -->
-                    <div id="padmin-email-stats-box" style="
-                        background: #ffffff;
-                        border: 1px solid #e2e8f0;
-                        border-radius: 14px;
-                        padding: 12px 14px;
-                        display: flex;
-                        flex-direction: column;
-                        gap: 10px;
-                        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-                    ">
-                        <div style="display: flex; align-items: center; justify-content: space-between;">
-                            <div style="font-size: 0.85rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 6px;">
-                                <span style="font-size: 1rem;">✉️</span>
-                                <span>E-maili teavitused</span>
-                            </div>
-                            <span style="font-size: 0.72rem; color: #64748b; font-weight: 600; background: #f1f5f9; padding: 2px 8px; border-radius: 6px;">
-                                Kuukvoot: ${emailStats.limit} tk
-                            </span>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px; text-align: center;">
-                                <div style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Saadetud sõnumid</div>
-                                <div id="padmin-emails-sent-val" style="font-size: 1.25rem; font-weight: 900; color: #2563eb; margin-top: 2px;">
-                                    ${emailStats.sentThisMonth}
-                                </div>
-                            </div>
-                            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 8px 10px; text-align: center;">
-                                <div style="font-size: 0.7rem; color: #15803d; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Saab veel saata</div>
-                                <div id="padmin-emails-remaining-val" style="font-size: 1.25rem; font-weight: 900; color: #16a34a; margin-top: 2px;">
-                                    ${emailStats.remaining}
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Progress Bar -->
-                        <div style="display: flex; flex-direction: column; gap: 4px;">
-                            <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #64748b; font-weight: 600;">
-                                <span>Kasutatud: ${emailPercent}%</span>
-                                <span>${emailStats.sentThisMonth} / ${emailStats.limit}</span>
-                            </div>
-                            <div style="height: 6px; background: #f1f5f9; border-radius: 4px; overflow: hidden; border: 1px solid #e2e8f0;">
-                                <div style="height: 100%; width: ${Math.min(100, emailPercent)}%; background: linear-gradient(90deg, #2563eb, #38bdf8); border-radius: 4px;"></div>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -514,6 +473,74 @@ function renderPAdminDashboard(
 
                     <div style="background: #ffffff; border-radius: 14px; padding: 10px; border: 1px solid #e2e8f0;">
                         ${renderSingleChartSvg(gamePoints, 'games', '#db2777', '#f472b6')}
+                    </div>
+                </div>
+
+                <!-- Chart 3: E-maili teavitused (EmailJS) -->
+                <div id="padmin-emails-card" style="
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 18px;
+                    padding: 18px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                ">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <div style="font-size: 1rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                <span>✉️</span>
+                                <span>E-maili teavitused</span>
+                            </div>
+                            <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">
+                                Liiguta hiir täpi kohale detailideks
+                            </div>
+                        </div>
+                        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #059669; font-weight: 900; font-size: 1.1rem; padding: 4px 14px; border-radius: 12px;">
+                            ${emailStats.sentThisMonth} / ${emailStats.limit}
+                        </div>
+                    </div>
+
+                    <div style="background: #ffffff; border-radius: 14px; padding: 10px; border: 1px solid #e2e8f0;">
+                        ${renderSingleChartSvg(emailPoints, 'emails', '#10b981', '#34d399')}
+                    </div>
+
+                    <!-- EmailJS saadetud sõnumite ja allesjäänud limiidi tabel/plokk -->
+                    <div id="padmin-email-stats-box" style="
+                        background: #ffffff;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 14px;
+                        padding: 10px 14px;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 8px;
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+                    ">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 8px; text-align: center;">
+                                <div style="font-size: 0.68rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Saadetud sõnumid</div>
+                                <div id="padmin-emails-sent-val" style="font-size: 1.15rem; font-weight: 900; color: #2563eb; margin-top: 1px;">
+                                    ${emailStats.sentThisMonth}
+                                </div>
+                            </div>
+                            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 6px 8px; text-align: center;">
+                                <div style="font-size: 0.68rem; color: #15803d; font-weight: 700; text-transform: uppercase;">Saab veel saata</div>
+                                <div id="padmin-emails-remaining-val" style="font-size: 1.15rem; font-weight: 900; color: #16a34a; margin-top: 1px;">
+                                    ${emailStats.remaining}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div style="display: flex; flex-direction: column; gap: 3px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: #64748b; font-weight: 600;">
+                                <span>Kasutatud: ${emailPercent}%</span>
+                                <span>${emailStats.sentThisMonth} / ${emailStats.limit}</span>
+                            </div>
+                            <div style="height: 6px; background: #f1f5f9; border-radius: 4px; overflow: hidden; border: 1px solid #e2e8f0;">
+                                <div style="height: 100%; width: ${Math.min(100, emailPercent)}%; background: linear-gradient(90deg, #10b981, #34d399); border-radius: 4px;"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -882,6 +909,12 @@ function renderPAdminDashboard(
                         <div style="font-weight: 800; font-size: 0.85rem; margin-bottom: 4px; color: #93c5fd;">📅 ${label}</div>
                         <div style="font-size: 0.82rem; margin-bottom: 3px;">👤 Tehtud kontosid: <strong style="color: #ffffff; font-size: 0.95rem;">${count}</strong></div>
                         <div style="font-size: 0.76rem; color: #cbd5e1;">${genderLine}</div>
+                    `;
+                } else if (chart === 'emails') {
+                    tooltip.innerHTML = `
+                        <div style="font-weight: 800; font-size: 0.85rem; margin-bottom: 4px; color: #6ee7b7;">📅 ${label}</div>
+                        <div style="font-size: 0.82rem; margin-bottom: 3px;">✉️ Saadetud e-kirju: <strong style="color: #ffffff; font-size: 0.95rem;">${count}</strong></div>
+                        <div style="font-size: 0.76rem; color: #cbd5e1;">EmailJS limiit: 200 tk / kuus</div>
                     `;
                 } else {
                     tooltip.innerHTML = `
