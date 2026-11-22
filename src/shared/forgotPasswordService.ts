@@ -13,6 +13,7 @@ import { playerCredentialsService } from './playerCredentials';
 export const EMAILJS_SERVICE_ID = 'service_xi3asu1';
 export const EMAILJS_TEMPLATE_ID = 'template_2a3zgrw'; // 6-digit code activation template
 export const EMAILJS_PASSWORD_TEMPLATE_ID = 'template_btarx7o'; // Password recovery template
+export const EMAILJS_SECURITY_ALERT_TEMPLATE_ID = 'template_v9xn3gm'; // Security alert (password changed) template
 export const EMAILJS_PUBLIC_KEY = 'VaO7SZVv8UswE2aNm';
 
 // Initialize emailjs
@@ -459,7 +460,68 @@ https://www.playardgames.com`;
                 .catch(() => {});
         }
 
+        // 4. Saada turvateavitus kinnitatud e-mailile (Security Alert)
+        this.sendPasswordChangeSecurityAlert(cleanUser).catch(() => {});
+
         return { success: true };
+    }
+
+    /**
+     * Saadab turvateavituse (Security Alert: Password Changed) kasutaja kinnitatud meilile
+     */
+    public async sendPasswordChangeSecurityAlert(username: string): Promise<{ success: boolean; error?: string }> {
+        const cleanUser = (username || '').toLowerCase().trim();
+        if (!cleanUser) return { success: false, error: 'Username missing' };
+
+        const targetEmail = this.getVerifiedEmail(cleanUser);
+        if (!targetEmail) return { success: false, error: 'No verified email found' };
+
+        try {
+            const isTestEmail = targetEmail.endsWith('@example.com') || (typeof window !== 'undefined' && (window as any).__PLAYARD_IS_TESTING__);
+            if (!isTestEmail) {
+                const nowStr = new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+                const detailedSecurityMessage =
+`Security Alert: Playard Games Account Password Changed
+
+Hello ${cleanUser},
+
+The password for your Playard Games account was successfully changed on:
+📅 ${nowStr}
+
+If you made this change, no further action is required.
+
+DIDN'T MAKE THIS CHANGE?
+If you did not change your password, someone else may have gained unauthorized access to your account.
+Please visit Playard Games and use the "Forgot Password" feature immediately to recover and secure your account:
+https://www.playardgames.com
+
+Best regards,
+Playard Games Security Team
+https://www.playardgames.com`;
+
+                const templateParams = {
+                    from_name: 'Playard Games',
+                    sender_name: 'Playard Games',
+                    to_name: cleanUser,
+                    to_email: targetEmail,
+                    email: targetEmail,
+                    user_email: targetEmail,
+                    recipient: targetEmail,
+                    reply_to: '1karl.ilves@gmail.com',
+                    username: cleanUser,
+                    user_name: cleanUser,
+                    date_time: nowStr,
+                    subject: 'Security Alert: Your Playard Games password was changed',
+                    message: detailedSecurityMessage
+                };
+
+                await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_SECURITY_ALERT_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
+            }
+            return { success: true };
+        } catch (err: any) {
+            console.error('EmailJS security alert error:', err);
+            return { success: false, error: err?.message || 'Error sending security alert' };
+        }
     }
 
     /**

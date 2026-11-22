@@ -17055,6 +17055,10 @@ await (async () => {
                 // Close modal
                 document.getElementById('btn-close-forgot-modal')?.click();
 
+                // Test sending Security Alert email
+                const alertRes = await forgotPasswordService.sendPasswordChangeSecurityAlert('testuser123');
+                const alertSuccess = alertRes.success;
+
                 return {
                     hasTrigger,
                     isModalOpen,
@@ -17067,14 +17071,15 @@ await (async () => {
                     sendSuccess,
                     step2Visible,
                     step3Visible,
-                    passwordUpdated
+                    passwordUpdated,
+                    alertSuccess
                 };
             });
             console.log("   Forgot Password Test Results:", forgotTestResult);
-            if (!forgotTestResult.hasTrigger || !forgotTestResult.isModalOpen || !forgotTestResult.hasNoAccountNotice || !forgotTestResult.hasUnavailableNotice || !forgotTestResult.hasCode || !forgotTestResult.wrongRejected || !forgotTestResult.correctAccepted || !forgotTestResult.verifiedEmail || !forgotTestResult.sendSuccess || !forgotTestResult.step2Visible || !forgotTestResult.step3Visible || !forgotTestResult.passwordUpdated) {
+            if (!forgotTestResult.hasTrigger || !forgotTestResult.isModalOpen || !forgotTestResult.hasNoAccountNotice || !forgotTestResult.hasUnavailableNotice || !forgotTestResult.hasCode || !forgotTestResult.wrongRejected || !forgotTestResult.correctAccepted || !forgotTestResult.verifiedEmail || !forgotTestResult.sendSuccess || !forgotTestResult.step2Visible || !forgotTestResult.step3Visible || !forgotTestResult.passwordUpdated || !forgotTestResult.alertSuccess) {
                 throw new Error("Forgot Password verification failed: " + JSON.stringify(forgotTestResult));
             }
-            console.log("   ✅ Forgot Password (no account & unavailable checks, 6-digit recovery code, UI 3-step password change & DB update) verified successfully!");
+            console.log("   ✅ Forgot Password (no account & unavailable checks, 6-digit recovery code, UI 3-step password change, DB update & Security Alert) verified successfully!");
 
             console.log("✅ All Playard Platform tests passed successfully!");
             process.exit(0);
