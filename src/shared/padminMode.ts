@@ -795,27 +795,22 @@ function renderPAdminDashboard(
                 </div>
             </div>
 
-            <!-- Päris serveri pilt keskel ilma liigsete tekstideta -->
+            <!-- Hall kast keskel -->
             <div id="padmin-server-image-container" style="
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                padding: 16px;
-                background: #f8fafc;
-                border: 1px solid #e2e8f0;
-                border-radius: 20px;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
             ">
-                <img id="padmin-server-image" src="/assets/server_photo.jpg" alt="Server" style="
+                <div id="padmin-server-image" style="
                     width: 520px;
                     max-width: calc(100vw - 80px);
-                    max-height: 440px;
-                    object-fit: cover;
-                    border-radius: 14px;
-                    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-                    display: block;
-                " />
+                    height: 340px;
+                    background: #94a3b8;
+                    border: 2px solid #64748b;
+                    border-radius: 16px;
+                    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+                "></div>
             </div>
         </div>
     `;
