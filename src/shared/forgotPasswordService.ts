@@ -129,7 +129,7 @@ export class ForgotPasswordService {
         const cleanEmail = (email || '').trim().toLowerCase();
 
         if (!cleanUser || !cleanEmail || !cleanEmail.includes('@')) {
-            return { success: false, error: 'Palun sisesta kehtiv e-maili aadress!' };
+            return { success: false, error: 'Please enter a valid email address!' };
         }
 
         const code = this.generate6DigitCode();
@@ -218,15 +218,15 @@ https://www.playardgames.com`;
             const match = list.find(p => p.username === cleanUser);
 
             if (!match) {
-                return { success: false, error: 'Kinnituskoodi taotlust ei leitud. Palun saada uus kood!' };
+                return { success: false, error: 'Verification request not found. Please request a new code!' };
             }
 
             if (Date.now() > match.expiresAt) {
-                return { success: false, error: 'Kinnituskood on aegunud! Palun saada uus kood.' };
+                return { success: false, error: 'Confirmation code has expired! Please request a new code.' };
             }
 
             if (match.code !== codeTrimmed) {
-                return { success: false, error: 'Vale 6-kohaline kood! Kontrolli oma meili.' };
+                return { success: false, error: 'Incorrect 6-digit code! Please check your email.' };
             }
 
             // Kood on õige! Salvesta ametlikult kinnitatud meiliaadress ja kood
@@ -239,7 +239,7 @@ https://www.playardgames.com`;
 
             return { success: true };
         } catch (e) {
-            return { success: false, error: 'Viga koodi kinnitamisel.' };
+            return { success: false, error: 'Error verifying code.' };
         }
     }
 
@@ -288,7 +288,7 @@ https://www.playardgames.com`;
     public async sendRecoveryCode(username: string): Promise<{ success: boolean; code?: string; message: string; notConfigured?: boolean; noAccount?: boolean }> {
         const cleanUser = (username || '').toLowerCase().trim();
         if (!cleanUser) {
-            return { success: false, message: 'Palun sisesta kasutajanimi!' };
+            return { success: false, message: 'Please enter your username!' };
         }
 
         const accountExists = this.isAccountExisting(cleanUser);
@@ -379,14 +379,14 @@ https://www.playardgames.com`;
             return {
                 success: true,
                 code,
-                message: `6-kohaline kood on saadetud sinu meilile (${targetEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3')})!`
+                message: `6-digit code has been sent to your email (${targetEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3')})!`
             };
         } catch (e: any) {
             console.error('EmailJS send error:', e);
             return {
                 success: true,
                 code,
-                message: `6-kohaline kood on saadetud sinu meilile (${targetEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3')})!`
+                message: `6-digit code has been sent to your email (${targetEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3')})!`
             };
         }
     }
@@ -406,21 +406,21 @@ https://www.playardgames.com`;
             const savedActivationCode = this.getActivationCode(cleanUser);
 
             if (!match && !savedActivationCode) {
-                return { success: false, error: 'Kinnituskoodi ei leitud. Palun taotle uus kood!' };
+                return { success: false, error: 'Recovery code not found. Please request a new code!' };
             }
 
             if (match && Date.now() > match.expiresAt) {
-                return { success: false, error: 'Kinnituskood on aegunud! Palun taotle uus kood.' };
+                return { success: false, error: 'Confirmation code has expired! Please request a new code.' };
             }
 
             const expectedCode = match ? match.code : savedActivationCode;
             if (expectedCode !== codeTrimmed && savedActivationCode !== codeTrimmed) {
-                return { success: false, error: 'Vale 6-kohaline kood! Kontrolli oma meili.' };
+                return { success: false, error: 'Incorrect 6-digit code! Please check your email.' };
             }
 
             return { success: true };
         } catch (e) {
-            return { success: false, error: 'Viga koodi kinnitamisel.' };
+            return { success: false, error: 'Error verifying code.' };
         }
     }
 
@@ -432,10 +432,10 @@ https://www.playardgames.com`;
         const pass = (newPass || '').trim();
 
         if (!cleanUser) {
-            return { success: false, error: 'Kasutajanimi puudub!' };
+            return { success: false, error: 'Username is missing!' };
         }
         if (!pass || pass.length < 3) {
-            return { success: false, error: 'Uus parool peab olema vähemalt 3 märki pikk!' };
+            return { success: false, error: 'New password must be at least 3 characters long!' };
         }
 
         // 1. Salvesta playerCredentialsService kaudu

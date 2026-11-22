@@ -1384,14 +1384,14 @@
                 </div>
                 <button id="btn-logout" style="padding: 8px 22px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Logout</button>
 
-                <!-- Pane see tööle nupp Log out all -->
+                <!-- Enable Forgot Password button under Logout -->
                 <div id="enable-forgot-pwd-wrap" style="margin-top: 14px;">
                     <button type="button" id="btn-enable-forgot-pwd" style="padding: 8px 16px; background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(52, 152, 219, 0.25)); border: 1.5px solid #00f2fe; color: #00f2fe; border-radius: 8px; cursor: pointer; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0 auto; box-shadow: 0 2px 10px rgba(0, 242, 254, 0.2); transition: all 0.2s;">
                         <span>🔐</span>
-                        <span>Pane see tööle (Forgot Password)</span>
+                        <span>Enable Forgot Password</span>
                     </button>
                     <div id="forgot-pwd-status-tag" style="margin-top: 6px; font-size: 0.78rem; color: #2ecc71; font-weight: 700; display: none;">
-                        ✅ Forgot Password on sellel kontol aktiivne!
+                        ✅ Forgot Password is active on this account!
                     </div>
                 </div>
             </div>
@@ -1407,36 +1407,36 @@
 
                     <!-- Step 1: Sisesta kasutajanimi ja vajuta Saada -->
                     <div id="forgot-step-1">
-                        <p style="color: #a4b0be; font-size: 0.86rem; margin-bottom: 16px;">Sisesta oma konto nimi ja me saadame 6-kohalise koodi sinu seotud e-mailile!</p>
+                        <p style="color: #a4b0be; font-size: 0.86rem; margin-bottom: 16px;">Enter your username and we will send a 6-digit recovery code to your linked email address!</p>
                         
                         <div style="margin-bottom: 16px; text-align: left;">
-                            <label style="display: block; color: #a4b0be; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">Konto Nimi (Username):</label>
-                            <input type="text" id="forgot-username-input" placeholder="Sisesta oma kasutajanimi" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #00f2fe; background: #131920; color: white; font-size: 0.95rem; outline: none;">
+                            <label style="display: block; color: #a4b0be; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">Username:</label>
+                            <input type="text" id="forgot-username-input" placeholder="Enter your username" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #00f2fe; background: #131920; color: white; font-size: 0.95rem; outline: none;">
                         </div>
 
                         <button type="button" id="btn-forgot-send" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #00f2fe, #3498db); border: none; border-radius: 8px; color: #05141e; font-size: 1rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 14px rgba(0,242,254,0.4);">
-                            ✉️ Saada
+                            ✉️ Send
                         </button>
                     </div>
 
                     <!-- Step 2: Sisesta meilile saabunud 6-kohaline kood -->
                     <div id="forgot-step-2" style="display: none;">
-                        <p style="color: #a4b0be; font-size: 0.86rem; margin-bottom: 14px;">Kontrolli oma meili! Sisesta sealt saadud 6-kohaline kood:</p>
+                        <p style="color: #a4b0be; font-size: 0.86rem; margin-bottom: 14px;">Check your email inbox! Enter the 6-digit recovery code below:</p>
                         <div style="margin-bottom: 16px; text-align: left;">
-                            <label style="display: block; color: #a4b0be; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">6-kohaline kood:</label>
-                            <input type="text" id="forgot-code-input" maxlength="6" placeholder="nt 123456" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #f1c40f; background: #131920; color: #f1c40f; font-size: 1.4rem; font-weight: 900; letter-spacing: 6px; text-align: center; outline: none;">
+                            <label style="display: block; color: #a4b0be; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">6-Digit Code:</label>
+                            <input type="text" id="forgot-code-input" maxlength="6" placeholder="e.g. 123456" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #f1c40f; background: #131920; color: #f1c40f; font-size: 1.4rem; font-weight: 900; letter-spacing: 6px; text-align: center; outline: none;">
                         </div>
                         <button type="button" id="btn-forgot-verify-code" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #f1c40f, #e67e22); border: none; border-radius: 8px; color: #000; font-size: 1rem; font-weight: 900; cursor: pointer; box-shadow: 0 4px 14px rgba(241,196,15,0.4);">
-                            ✅ Kinnita Kood
+                            ✅ Confirm Code
                         </button>
                     </div>
 
                     <!-- Step 3: Parooli vahetamine (Uus parool + OK) -->
                     <div id="forgot-step-3" style="display: none;">
-                        <p style="color: #2ecc71; font-size: 0.88rem; font-weight: bold; margin-bottom: 14px;">Kood on õige! Sisesta oma uus parool:</p>
+                        <p style="color: #2ecc71; font-size: 0.88rem; font-weight: bold; margin-bottom: 14px;">Code confirmed! Enter your new password:</p>
                         <div style="margin-bottom: 16px; text-align: left;">
-                            <label style="display: block; color: #a4b0be; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">Uus Parool:</label>
-                            <input type="password" id="forgot-new-password-input" placeholder="Sisesta uus parool" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #2ecc71; background: #131920; color: white; font-size: 1rem; outline: none;">
+                            <label style="display: block; color: #a4b0be; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">New Password:</label>
+                            <input type="password" id="forgot-new-password-input" placeholder="Enter new password" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #2ecc71; background: #131920; color: white; font-size: 1rem; outline: none;">
                         </div>
                         <button type="button" id="btn-forgot-change-ok" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #2ecc71, #27ae60); border: none; border-radius: 8px; color: #ffffff; font-size: 1.05rem; font-weight: 900; cursor: pointer; box-shadow: 0 4px 14px rgba(46,204,113,0.4);">
                             OK
@@ -1452,29 +1452,29 @@
                 <div style="background: #1e272e; border: 2px solid #2ecc71; border-radius: 16px; padding: 24px; max-width: 420px; width: 100%; box-shadow: 0 15px 40px rgba(0,0,0,0.8), 0 0 25px rgba(46,204,113,0.3); text-align: center; position: relative;">
                     <button type="button" id="btn-close-activate-modal" style="position: absolute; top: 12px; right: 14px; background: none; border: none; color: #fff; font-size: 1.2rem; cursor: pointer;">✕</button>
                     <div style="font-size: 2.2rem; margin-bottom: 8px;">📧</div>
-                    <h3 style="color: #2ecc71; margin: 0 0 8px 0; font-size: 1.25rem;">Aktiveeri Forgot Password</h3>
+                    <h3 style="color: #2ecc71; margin: 0 0 8px 0; font-size: 1.25rem;">Activate Forgot Password</h3>
                     
                     <!-- Step 1: Sisesta email -->
                     <div id="activate-step-1">
-                        <p style="color: #a4b0be; font-size: 0.86rem; margin-bottom: 14px;">Sisesta oma e-mail. Saadame sinna 6-kohalise kinnituskoodi!</p>
+                        <p style="color: #a4b0be; font-size: 0.86rem; margin-bottom: 14px;">Enter your email address. We will send a 6-digit confirmation code!</p>
                         <div style="margin-bottom: 16px; text-align: left;">
-                            <label style="display: block; color: #a4b0be; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">Sinu E-mail:</label>
-                            <input type="email" id="activate-email-input" placeholder="nt sinunimi@gmail.com" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #2ecc71; background: #131920; color: white; font-size: 0.95rem; outline: none;">
+                            <label style="display: block; color: #a4b0be; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">Your Email:</label>
+                            <input type="email" id="activate-email-input" placeholder="e.g. yourname@gmail.com" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #2ecc71; background: #131920; color: white; font-size: 0.95rem; outline: none;">
                         </div>
                         <button type="button" id="btn-activate-send-code" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #2ecc71, #27ae60); border: none; border-radius: 8px; color: #fff; font-size: 1rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 14px rgba(46,204,113,0.4);">
-                            📨 Saada 6-kohaline kood
+                            📨 Send 6-digit Code
                         </button>
                     </div>
 
                     <!-- Step 2: Sisesta 6-kohaline kood -->
                     <div id="activate-step-2" style="display: none;">
-                        <p style="color: #a4b0be; font-size: 0.86rem; margin-bottom: 14px;">Kontrolli oma meili! Sisesta sealt saadud 6-kohaline parool / kood:</p>
+                        <p style="color: #a4b0be; font-size: 0.86rem; margin-bottom: 14px;">Check your email! Enter the 6-digit confirmation code received:</p>
                         <div style="margin-bottom: 16px; text-align: left;">
-                            <label style="display: block; color: #a4b0be; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">6-kohaline kood:</label>
-                            <input type="text" id="activate-code-input" maxlength="6" placeholder="nt 123456" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #f1c40f; background: #131920; color: #f1c40f; font-size: 1.4rem; font-weight: 900; letter-spacing: 6px; text-align: center; outline: none;">
+                            <label style="display: block; color: #a4b0be; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">6-Digit Code:</label>
+                            <input type="text" id="activate-code-input" maxlength="6" placeholder="e.g. 123456" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #f1c40f; background: #131920; color: #f1c40f; font-size: 1.4rem; font-weight: 900; letter-spacing: 6px; text-align: center; outline: none;">
                         </div>
                         <button type="button" id="btn-activate-confirm-code" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #f1c40f, #e67e22); border: none; border-radius: 8px; color: #000; font-size: 1rem; font-weight: 900; cursor: pointer; box-shadow: 0 4px 14px rgba(241,196,15,0.4);">
-                            ✅ Kinnita & Aktiveeri
+                            ✅ Confirm & Activate
                         </button>
                     </div>
 

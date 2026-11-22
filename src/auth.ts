@@ -1774,14 +1774,14 @@ export async function initAuth() {
         if (!u) {
             if (forgotModalMsg) {
                 forgotModalMsg.style.color = '#e74c3c';
-                forgotModalMsg.textContent = 'Palun sisesta oma kasutajanimi!';
+                forgotModalMsg.textContent = 'Please enter your username!';
             }
             return;
         }
 
         if (forgotModalMsg) {
             forgotModalMsg.style.color = '#00f2fe';
-            forgotModalMsg.textContent = 'Kontrollin ja saadan koodi meilile...';
+            forgotModalMsg.textContent = 'Verifying and sending recovery code to your email...';
         }
 
         const res = await forgotPasswordService.sendRecoveryCode(u);
@@ -1812,7 +1812,7 @@ export async function initAuth() {
         if (!code || code.length !== 6) {
             if (forgotModalMsg) {
                 forgotModalMsg.style.color = '#e74c3c';
-                forgotModalMsg.textContent = 'Palun sisesta 6-kohaline kood!';
+                forgotModalMsg.textContent = 'Please enter the 6-digit code!';
             }
             return;
         }
@@ -1824,7 +1824,7 @@ export async function initAuth() {
             if (forgotStep3) forgotStep3.style.display = 'block';
             if (forgotModalMsg) {
                 forgotModalMsg.style.color = '#2ecc71';
-                forgotModalMsg.textContent = 'Kood õige! Nüüd saad määrata uue parooli.';
+                forgotModalMsg.textContent = 'Code confirmed! You can now set your new password.';
             }
             if (forgotNewPasswordInput) {
                 forgotNewPasswordInput.value = '';
@@ -1833,7 +1833,7 @@ export async function initAuth() {
         } else {
             if (forgotModalMsg) {
                 forgotModalMsg.style.color = '#e74c3c';
-                forgotModalMsg.textContent = res.error || 'Vale kood!';
+                forgotModalMsg.textContent = res.error || 'Incorrect code!';
             }
         }
     });
@@ -1844,7 +1844,7 @@ export async function initAuth() {
         if (!newPass) {
             if (forgotModalMsg) {
                 forgotModalMsg.style.color = '#e74c3c';
-                forgotModalMsg.textContent = 'Palun sisesta uus parool!';
+                forgotModalMsg.textContent = 'Please enter a new password!';
             }
             return;
         }
@@ -1853,7 +1853,7 @@ export async function initAuth() {
         if (res.success) {
             if (forgotModalMsg) {
                 forgotModalMsg.style.color = '#2ecc71';
-                forgotModalMsg.textContent = '🎉 Uus parool on edukalt andmebaasi salvestatud!';
+                forgotModalMsg.textContent = '🎉 New password successfully updated in database!';
             }
             if (passwordInput) {
                 passwordInput.value = newPass;
@@ -1863,12 +1863,12 @@ export async function initAuth() {
             }
             setTimeout(() => {
                 closeForgotModal();
-                showMsg('Parool on uuendatud! Saad nüüd uue parooliga sisse logida.', 'success');
+                showMsg('Password updated! You can now log in with your new password.', 'success');
             }, 1200);
         } else {
             if (forgotModalMsg) {
                 forgotModalMsg.style.color = '#e74c3c';
-                forgotModalMsg.textContent = res.error || 'Viga parooli vahetamisel.';
+                forgotModalMsg.textContent = res.error || 'Error updating password.';
             }
         }
     });
@@ -1896,7 +1896,7 @@ export async function initAuth() {
         if (prof?.username) {
             openActivationModal(prof.username);
         } else {
-            showMsg('Palun logi enne sisse!', 'error');
+            showMsg('Please log in first!', 'error');
         }
     });
 
@@ -1907,14 +1907,14 @@ export async function initAuth() {
         if (!em || !em.includes('@') || !em.includes('.')) {
             if (activateModalMsg) {
                 activateModalMsg.style.color = '#e74c3c';
-                activateModalMsg.textContent = 'Palun sisesta kehtiv e-maili aadress!';
+                activateModalMsg.textContent = 'Please enter a valid email address!';
             }
             return;
         }
 
         if (activateModalMsg) {
             activateModalMsg.style.color = '#f1c40f';
-            activateModalMsg.textContent = 'Saadan 6-kohalise koodi meilile...';
+            activateModalMsg.textContent = 'Sending 6-digit code to email...';
         }
 
         const res = await forgotPasswordService.sendActivationCode(currentActivationUsername, em);
@@ -1923,7 +1923,7 @@ export async function initAuth() {
             if (activateStep2) activateStep2.style.display = 'block';
             if (activateModalMsg) {
                 activateModalMsg.style.color = '#2ecc71';
-                activateModalMsg.textContent = 'Kood saadetud! Kontrolli oma e-posti.';
+                activateModalMsg.textContent = 'Code sent! Please check your email.';
             }
             if (activateCodeInput) {
                 activateCodeInput.value = '';
@@ -1932,7 +1932,7 @@ export async function initAuth() {
         } else {
             if (activateModalMsg) {
                 activateModalMsg.style.color = '#e74c3c';
-                activateModalMsg.textContent = res.error || 'Viga koodi saatmisel.';
+                activateModalMsg.textContent = res.error || 'Error sending code.';
             }
         }
     });
@@ -1942,7 +1942,7 @@ export async function initAuth() {
         if (!code || code.length !== 6) {
             if (activateModalMsg) {
                 activateModalMsg.style.color = '#e74c3c';
-                activateModalMsg.textContent = 'Palun sisesta täpselt 6-kohaline number!';
+                activateModalMsg.textContent = 'Please enter exactly a 6-digit number!';
             }
             return;
         }
@@ -1951,7 +1951,7 @@ export async function initAuth() {
         if (res.success) {
             if (activateModalMsg) {
                 activateModalMsg.style.color = '#2ecc71';
-                activateModalMsg.textContent = '🎉 Õnnestus! Forgot Password on edukalt aktiveeritud!';
+                activateModalMsg.textContent = '🎉 Success! Forgot Password is now activated!';
             }
             setTimeout(() => {
                 closeActivationModal();
@@ -1961,7 +1961,7 @@ export async function initAuth() {
         } else {
             if (activateModalMsg) {
                 activateModalMsg.style.color = '#e74c3c';
-                activateModalMsg.textContent = res.error || 'Vale kood!';
+                activateModalMsg.textContent = res.error || 'Incorrect code!';
             }
         }
     });
