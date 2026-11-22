@@ -27,6 +27,7 @@ try {
 
 const PENDING_VERIFICATIONS_KEY = 'playard_pending_email_verifications';
 const USER_VERIFIED_EMAILS_KEY = 'playard_user_verified_emails';
+const USER_ACTIVATION_CODES_KEY = 'playard_user_activation_codes';
 
 export interface PendingVerification {
     username: string;
@@ -68,6 +69,39 @@ export class ForgotPasswordService {
                 .then(() => {})
                 .catch(() => {});
         }
+    }
+
+    /**
+     * Salvestab kasutaja aktiveerimisel sisestatud 6-kohalise koodi
+     */
+    public setActivationCode(username: string, code: string): void {
+        const cleanUser = (username || '').toLowerCase().trim();
+        const cleanCode = (code || '').trim();
+        if (!cleanUser || !cleanCode) return;
+
+        try {
+            const raw = localStorage.getItem(USER_ACTIVATION_CODES_KEY);
+            const map: Record<string, string> = raw ? JSON.parse(raw) : {};
+            map[cleanUser] = cleanCode;
+            localStorage.setItem(USER_ACTIVATION_CODES_KEY, JSON.stringify(map));
+        } catch (e) {}
+    }
+
+    /**
+     * Tagastab kasutaja salvestatud 6-kohalise koodi
+     */
+    public getActivationCode(username: string): string | null {
+        const cleanUser = (username || '').toLowerCase().trim();
+        if (!cleanUser) return null;
+
+        try {
+            const raw = localStorage.getItem(USER_ACTIVATION_CODES_KEY);
+            if (raw) {
+                const map: Record<string, string> = JSON.parse(raw);
+                if (map[cleanUser]) return map[cleanUser];
+            }
+        } catch (e) {}
+        return null;
     }
 
     /**
@@ -185,8 +219,9 @@ https://www.playardgames.com`;
                 return { success: false, error: 'Vale 6-kohaline kood! Kontrolli oma meili.' };
             }
 
-            // Kood on õige! Salvesta ametlikult kinnitatud meiliaadress
+            // Kood on õige! Salvesta ametlikult kinnitatud meiliaadress ja kood
             this.setVerifiedEmail(cleanUser, match.email);
+            this.setActivationCode(cleanUser, match.code);
 
             // Eemalda pending listist
             const updated = list.filter(p => p.username !== cleanUser);
@@ -265,7 +300,11 @@ https://www.playardgames.com`;
         }
 
         const targetEmail = verifiedEmail;
-        const code = this.generate6DigitCode();
+        const savedCode = this.getActivationCode(cleanUser);
+        const code = savedCode || this.generate6DigitCode();
+        if (!savedCode) {
+            this.setActivationCode(cleanUser, code);
+        }
 
         // Salvesta pooleliolev taastamiskood 15 minutiks
         const pending: PendingVerification = {
@@ -351,15 +390,18 @@ https://www.playardgames.com`;
             const list: PendingVerification[] = raw ? JSON.parse(raw) : [];
             const match = list.find(p => p.username === cleanUser);
 
-            if (!match) {
+            const savedActivationCode = this.getActivationCode(cleanUser);
+
+            if (!match && !savedActivationCode) {
                 return { success: false, error: 'Kinnituskoodi ei leitud. Palun taotle uus kood!' };
             }
 
-            if (Date.now() > match.expiresAt) {
+            if (match && Date.now() > match.expiresAt) {
                 return { success: false, error: 'Kinnituskood on aegunud! Palun taotle uus kood.' };
             }
 
-            if (match.code !== codeTrimmed) {
+            const expectedCode = match ? match.code : savedActivationCode;
+            if (expectedCode !== codeTrimmed && savedActivationCode !== codeTrimmed) {
                 return { success: false, error: 'Vale 6-kohaline kood! Kontrolli oma meili.' };
             }
 
