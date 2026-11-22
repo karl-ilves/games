@@ -16817,6 +16817,8 @@ await (async () => {
                 const hasServersCard = !!serversCard;
                 const hasServerImage = !!document.getElementById('padmin-server-image');
                 const hasServerContainer = !!document.getElementById('padmin-server-image-container');
+                const hasRedLed = !!document.getElementById('padmin-led-red');
+                const hasGreenLed = !!document.getElementById('padmin-led-green');
 
                 // Switch back to Analytics Tab -> Shows #padmin-stats-card again
                 const analyticsTabBtnBack = document.querySelector('.padmin-tab-btn[data-tab="analytics"]');
@@ -16837,6 +16839,8 @@ await (async () => {
                     hasServersCard,
                     hasServerImage,
                     hasServerContainer,
+                    hasRedLed,
+                    hasGreenLed,
                     categoryTabs,
                     hasUpdatesCard,
                     statsCardHiddenOnUpdates,
@@ -16863,7 +16867,7 @@ await (async () => {
                 };
             });
             console.log("   PAdmin Active State:", padminState);
-            if (!padminState.isPAdminMode || !padminState.hasLogoutBtn || !padminState.logoutBtnStillPresent || !padminState.hasAccountsCard || !padminState.hasGamesCard || !padminState.hasEmailsCard || padminState.todayDots !== 1 || padminState.weekDots !== 7 || padminState.monthDots !== 30 || !padminState.tooltipVisible || !padminState.hasCategoryTabs || !padminState.hasUpdatesCard || !padminState.statsCardHiddenOnUpdates || !padminState.statsCardBack || !padminState.hasAddUpdateCard || !padminState.hasTimelineOverlay || !padminState.timelineClosed || !padminState.isPolished || !padminState.notInPAdminList || !padminState.hasEmailStatsBox || !padminState.hasEmailsSentVal || !padminState.hasEmailsRemainingVal || !padminState.hasServersTab || !padminState.hasServersCard || !padminState.hasServerImage) {
+            if (!padminState.isPAdminMode || !padminState.hasLogoutBtn || !padminState.logoutBtnStillPresent || !padminState.hasAccountsCard || !padminState.hasGamesCard || !padminState.hasEmailsCard || padminState.todayDots !== 1 || padminState.weekDots !== 7 || padminState.monthDots !== 30 || !padminState.tooltipVisible || !padminState.hasCategoryTabs || !padminState.hasUpdatesCard || !padminState.statsCardHiddenOnUpdates || !padminState.statsCardBack || !padminState.hasAddUpdateCard || !padminState.hasTimelineOverlay || !padminState.timelineClosed || !padminState.isPolished || !padminState.notInPAdminList || !padminState.hasEmailStatsBox || !padminState.hasEmailsSentVal || !padminState.hasEmailsRemainingVal || !padminState.hasServersTab || !padminState.hasServersCard || !padminState.hasServerImage || !padminState.hasRedLed || !padminState.hasGreenLed) {
                 throw new Error("PAdmin Special Mode activation or Update Submission failed: " + JSON.stringify(padminState));
             }
 

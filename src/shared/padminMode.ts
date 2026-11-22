@@ -795,22 +795,56 @@ function renderPAdminDashboard(
                 </div>
             </div>
 
-            <!-- Hall kast keskel -->
+            <!-- Hall kast keskel koos tuledega (punane ja roheline tuli kõrval, praegu punane põleb) -->
             <div id="padmin-server-image-container" style="
                 display: flex;
-                flex-direction: column;
+                flex-direction: row;
                 align-items: center;
                 justify-content: center;
+                gap: 20px;
             ">
+                <!-- Serveri kast -->
                 <div id="padmin-server-image" style="
                     width: 520px;
-                    max-width: calc(100vw - 80px);
+                    max-width: calc(100vw - 120px);
                     height: 340px;
                     background: #94a3b8;
                     border: 2px solid #64748b;
                     border-radius: 16px;
                     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
                 "></div>
+
+                <!-- Tuled kõrval (punane ja roheline) -->
+                <div id="padmin-server-leds" style="
+                    display: flex;
+                    flex-direction: column;
+                    gap: 14px;
+                    padding: 12px;
+                    background: #f1f5f9;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 14px;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+                ">
+                    <!-- Punane tuli (praegu põleb / aktiivne) -->
+                    <div id="padmin-led-red" title="Punane tuli (Aktiivne)" style="
+                        width: 18px;
+                        height: 18px;
+                        border-radius: 50%;
+                        background: #ef4444;
+                        box-shadow: 0 0 14px #ef4444, 0 0 4px #dc2626;
+                        border: 2px solid #b91c1c;
+                    "></div>
+
+                    <!-- Roheline tuli (väljas / ootel) -->
+                    <div id="padmin-led-green" title="Roheline tuli (Väljas)" style="
+                        width: 18px;
+                        height: 18px;
+                        border-radius: 50%;
+                        background: #14532d;
+                        border: 2px solid #052e16;
+                        opacity: 0.35;
+                    "></div>
+                </div>
             </div>
         </div>
     `;
