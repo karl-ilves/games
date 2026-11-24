@@ -13745,18 +13745,30 @@ await (async () => {
                 msgs = ai.state.getMessages();
                 const turingReply = msgs[msgs.length - 1]?.text || '';
 
-                return {
+                const res = {
                     syncSuccess: syncReply.includes('Playard AI Vikipeedia Teadmistebaas Uuendatud') && syncReply.includes('Geograafia'),
                     solarSuccess: solarReply.includes('Päikesesüsteem') && (solarReply.includes('Vikipeedia') || solarReply.includes('Wikipedia')),
                     lightSuccess: lightReply.includes('299 792 458') || lightReply.includes('300 000 km/s'),
-                    turingSuccess: turingReply.includes('Alan Turing') && (turingReply.includes('Enigma') || turingReply.includes('arvutiteaduse'))
+                    turingSuccess: turingReply.includes('Alan Turing') && (turingReply.includes('Enigma') || turingReply.includes('arvutiteaduse')),
+                    a380EntityTest: true
                 };
+
+                // 5. Automated Wikipedia extraction & model creation: "loo mulle a380"
+                await ai.handleUserInput('loo mulle a380');
+                await new Promise(r => setTimeout(r, 500));
+                msgs = ai.state.getMessages();
+                const a380Msg = msgs[msgs.length - 1]?.text || '';
+                const activeScene = ai.state.getActiveScene();
+                const hasA380Mesh = activeScene?.objects?.some(o => o.type === 'a380');
+                res.a380EntityTest = (a380Msg.includes('Airbus') || a380Msg.includes('A380')) && hasA380Mesh;
+                return res;
             });
 
             console.log("   Wikipedia Knowledge Sync & Search Results:", wikiKnowledgeTest);
             if (
                 !wikiKnowledgeTest.syncSuccess || !wikiKnowledgeTest.solarSuccess ||
-                !wikiKnowledgeTest.lightSuccess || !wikiKnowledgeTest.turingSuccess
+                !wikiKnowledgeTest.lightSuccess || !wikiKnowledgeTest.turingSuccess ||
+                !wikiKnowledgeTest.a380EntityTest
             ) {
                 throw new Error("Wikipedia Knowledge Sync or Search test failed: " + JSON.stringify(wikiKnowledgeTest));
             }

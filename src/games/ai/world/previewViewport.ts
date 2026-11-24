@@ -216,6 +216,85 @@ export class PreviewViewport {
             return planeGroup;
         }
 
+        if (obj.type === 'a380') {
+            const a380Group = new THREE.Group();
+            a380Group.position.set(obj.position[0], obj.position[1], obj.position[2]);
+
+            // Double-decker fuselage (Valge massiivne laia kerega korpus)
+            const fuseGeo = new THREE.CylinderGeometry(1.4, 0.8, 14, 24);
+            fuseGeo.rotateX(Math.PI / 2);
+            const fuseMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, metalness: 0.1 });
+            const fuselage = new THREE.Mesh(fuseGeo, fuseMat);
+            a380Group.add(fuselage);
+
+            // Cockpit & Upper deck cockpit windows
+            const noseGeo = new THREE.SphereGeometry(1.38, 16, 16);
+            noseGeo.scale(1, 0.9, 1.4);
+            const nose = new THREE.Mesh(noseGeo, fuseMat);
+            nose.position.set(0, 0, 6.8);
+            a380Group.add(nose);
+
+            const glassMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.1, metalness: 0.9 });
+            const cockpitWindow = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.4, 0.6), glassMat);
+            cockpitWindow.position.set(0, 0.5, 7.2);
+            a380Group.add(cockpitWindow);
+
+            // Large swept-back wings (Massiivsed tiivad ulatusega 18 ühikut)
+            const wingGeo = new THREE.BoxGeometry(18, 0.25, 3.2);
+            const wingMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.3 });
+            const wings = new THREE.Mesh(wingGeo, wingMat);
+            wings.position.set(0, -0.2, 0.5);
+            wings.rotation.x = 0.05;
+            a380Group.add(wings);
+
+            // Winglets (A380 iseloomulikud tiivaotsad)
+            const wlMat = new THREE.MeshStandardMaterial({ color: 0x0284c7 });
+            const wlLeft = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.4, 0.8), wlMat);
+            wlLeft.position.set(-9, 0.4, 0.5);
+            const wlRight = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.4, 0.8), wlMat);
+            wlRight.position.set(9, 0.4, 0.5);
+            a380Group.add(wlLeft, wlRight);
+
+            // 4 Jet Turbofan Engines (4 reaktiivmootorit)
+            const engineOffsets = [-5.5, -2.8, 2.8, 5.5];
+            const engineMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.6, roughness: 0.3 });
+            const intakeMat = new THREE.MeshBasicMaterial({ color: 0x1e293b });
+            for (const ex of engineOffsets) {
+                const pod = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.5, 2.2, 16), engineMat);
+                pod.rotateX(Math.PI / 2);
+                pod.position.set(ex, -0.9, 0.6);
+                a380Group.add(pod);
+
+                const intake = new THREE.Mesh(new THREE.CircleGeometry(0.5, 16), intakeMat);
+                intake.position.set(ex, -0.9, 1.72);
+                a380Group.add(intake);
+            }
+
+            // Tail fin (Vertikaalne massiivne saba sinise Airbus värviga)
+            const tailGeo = new THREE.BoxGeometry(0.2, 3.8, 2.8);
+            const tailFin = new THREE.Mesh(tailGeo, wlMat);
+            tailFin.position.set(0, 2.2, -5.5);
+            tailFin.rotation.x = -0.3;
+            a380Group.add(tailFin);
+
+            // Horizontal tail stabilizers
+            const hTailGeo = new THREE.BoxGeometry(6.5, 0.18, 1.6);
+            const hTail = new THREE.Mesh(hTailGeo, wingMat);
+            hTail.position.set(0, 0.8, -6.0);
+            a380Group.add(hTail);
+
+            // Subtle flight floating animation
+            this.animatedMeshes.push({
+                mesh: a380Group,
+                update: (t) => {
+                    a380Group.position.y = obj.position[1] + Math.sin(t * 1.8) * 0.25;
+                    a380Group.rotation.z = Math.sin(t * 0.8) * 0.03;
+                }
+            });
+
+            return a380Group;
+        }
+
         if (obj.type === 'coin') {
             const coinGeo = new THREE.CylinderGeometry(0.6, 0.6, 0.15, 24);
             coinGeo.rotateX(Math.PI / 2);

@@ -22,10 +22,10 @@ export const PLAYARD_AI_MODELS: Record<string, PlayardAiModelConfig> = {
     playard_game_ai_1_1: {
         id: 'playard_game_ai_1_1',
         name: 'Playard game ai 1.1',
-        subtitle: '⚡ Välkkiire 3D mängulooja & koodimootor',
-        description: 'Optimeeritud mudel Playard 3D maailmade ehitamiseks, skriptimiseks, füüsika arvutamiseks ja semantiliseks sünteesiks.',
+        subtitle: '⚡ Välkkiire Qwen 2.5 (0.5B) + Reaalajas Vikipeedia & Netiotsing',
+        description: 'Optimeeritud Qwen 2.5 (0.5B, ~700 MB) arhitektuuril põhinev Playard 3D mängulooja, mis otsib automaatselt internetist ja Vikipeediast fakte ning pilte täpsete mudelite ehitamiseks.',
         icon: '🤖',
-        badge: 'Universaalne',
+        badge: 'Qwen 2.5 (0.5B)',
         vipOnly: false,
         has5hLimit: true,
         has5dLimit: true

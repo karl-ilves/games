@@ -231,10 +231,30 @@ export class ConversationEngine {
             };
         }
 
-        // 0.05 Live Wikipedia Search Query Fallback
-        if (lower.includes('vikipeedia') || lower.includes('wikipedia') || lower.includes('vikipeedjast') || lower.includes('otsi wikist')) {
-            const wikiArticle = await PlayardWikipediaService.fetchWikipediaSummary(text);
+        // 0.05 Live Wikipedia Search Query & Entity Builder Trigger (e.g. "otsi vikipeediast Päikesesüsteem", "loo mulle a380")
+        const isWikiDirect = lower.includes('vikipeedia') || lower.includes('wikipedia') || lower.includes('vikipeedjast') || lower.includes('otsi wikist');
+        const isEntityBuildRequest = /^(?:palun\s+)?(?:loo|tee|ehita|valmista|create|make|build|pane)\s+(?:mulle\s+|meile\s+|üht\s+|üks\s+|uus\s+)?(a\s*380|airbus|antonov|an-225|ufo|saturn|jupiter|dinosaurus)/i.test(lower);
+
+        if (isWikiDirect || isEntityBuildRequest) {
+            const searchEntity = PlayardWikipediaService.extractSearchEntity(text);
+            const wikiArticle = await PlayardWikipediaService.fetchWikipediaSummary(searchEntity || text);
             if (wikiArticle) {
+                if (isEntityBuildRequest) {
+                    return {
+                        intent: 'ADD_FEATURE',
+                        confidence: 0.99,
+                        rawText: text,
+                        actionTarget: searchEntity || 'entity',
+                        parameters: {
+                            feature: 'generic_prop',
+                            text,
+                            searchEntity,
+                            wikiArticle
+                        },
+                        safetyReport
+                    };
+                }
+
                 return {
                     intent: 'GENERAL_KNOWLEDGE',
                     confidence: 0.99,
@@ -701,13 +721,25 @@ export class ConversationEngine {
             };
         }
 
-        // Generic modification or addition
-        if (/lisa|pane|ehita|add|put|place/i.test(lower)) {
+        // Specific object / vehicle creation with automated Wikipedia search & factual lookup
+        // E.g. "loo mulle a380", "ehita a 380", "lisa tank", "tee mulle allveelaev"
+        if (/loo|tee|lisa|ehita|pane|valmista|create|make|build|add|spawn/i.test(lower)) {
+            const searchEntity = PlayardWikipediaService.extractSearchEntity(text);
+            let wikiArticle: any = null;
+            if (searchEntity && searchEntity.length > 1) {
+                wikiArticle = await PlayardWikipediaService.fetchWikipediaSummary(searchEntity);
+            }
+
             return {
                 intent: 'ADD_FEATURE',
-                confidence: 0.8,
+                confidence: 0.88,
                 rawText: text,
-                parameters: { feature: 'generic_prop', text },
+                parameters: {
+                    feature: 'generic_prop',
+                    text,
+                    searchEntity,
+                    wikiArticle
+                },
                 safetyReport
             };
         }

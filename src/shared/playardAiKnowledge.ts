@@ -792,12 +792,25 @@ export interface WikipediaArticleSummary {
     title: string;
     extract: string;
     pageUrl?: string;
+    imageUrl?: string;
     source: 'wikipedia_live' | 'wikipedia_preloaded';
     lang: 'et' | 'en';
 }
 
 export class PlayardWikipediaService {
     private static cache: Map<string, WikipediaArticleSummary> = new Map();
+
+    /**
+     * Cleans user prompt: strips intent trigger words ("loo mulle", "ehita mulle", "otsi", "teada", etc.)
+     * and extracts the core entity to search (e.g. "loo mulle a380" -> "a380").
+     */
+    public static extractSearchEntity(input: string): string {
+        return input
+            .replace(/^(loo|tee|ehita|valmista|joonista|kuva|genereeri|näita|anna|otsi|tahan|vajan)\s+(mulle\s+|meile\s+|üht\s+|üks\s+|uus\s+)*/i, '')
+            .replace(/^(otsi\s+vikipeediast|vikipeedia|vikipeedjast|otsi\s+wikist|wikipedia|search\s+wikipedia|mis\s+on|mis\s+oli|kes\s+on|kes\s+oli|mida\s+tead|kuidas\s+töötab)\s+/i, '')
+            .replace(/[?!.,;]/g, '')
+            .trim();
+    }
 
     public static PRELOADED_ARTICLES: Record<string, { title: string; extract: string; lang: 'et' | 'en' }> = {
         'eesti': {
@@ -997,11 +1010,7 @@ export class PlayardWikipediaService {
     }
 
     public static async fetchWikipediaSummary(query: string): Promise<WikipediaArticleSummary | null> {
-        const clean = query
-            .toLowerCase()
-            .replace(/^(otsi\s+vikipeediast|vikipeedia|vikipeedjast|otsi\s+wikist|wikipedia|search\s+wikipedia|mis\s+on|kes\s+on|mida\s+tead|kuidas\s+töötab)\s+/i, '')
-            .replace(/[?!.,;]/g, '')
-            .trim();
+        const clean = this.extractSearchEntity(query).toLowerCase();
 
         if (!clean) return null;
 
@@ -1020,6 +1029,7 @@ export class PlayardWikipediaService {
                         title: data.title,
                         extract: data.extract,
                         pageUrl: data.content_urls?.desktop?.page || `https://et.wikipedia.org/wiki/${encodeURIComponent(data.title)}`,
+                        imageUrl: data.thumbnail?.source || data.originalimage?.source,
                         source: 'wikipedia_live',
                         lang: 'et'
                     };
@@ -1036,7 +1046,7 @@ export class PlayardWikipediaService {
             return pre;
         }
 
-        // Live Search API Fallback
+        // Live Search API Fallback (Estonian)
         try {
             const searchUrl = `https://et.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(clean)}&utf8=&format=json&origin=*`;
             const searchResp = await fetch(searchUrl);
@@ -1053,6 +1063,7 @@ export class PlayardWikipediaService {
                                 title: hdata.title,
                                 extract: hdata.extract,
                                 pageUrl: hdata.content_urls?.desktop?.page || `https://et.wikipedia.org/wiki/${encodeURIComponent(hdata.title)}`,
+                                imageUrl: hdata.thumbnail?.source || hdata.originalimage?.source,
                                 source: 'wikipedia_live',
                                 lang: 'et'
                             };
@@ -1064,15 +1075,37 @@ export class PlayardWikipediaService {
             }
         } catch (e) {}
 
+        // Global Wikipedia Fallback (English - e.g. for specific models like A380, An-225, spacecraft)
+        try {
+            const enUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(clean)}`;
+            const enResp = await fetch(enUrl, { headers: { 'Accept': 'application/json' } });
+            if (enResp.ok) {
+                const edata = await enResp.json();
+                if (edata.extract) {
+                    const res: WikipediaArticleSummary = {
+                        title: edata.title,
+                        extract: edata.extract,
+                        pageUrl: edata.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(edata.title)}`,
+                        imageUrl: edata.thumbnail?.source || edata.originalimage?.source,
+                        source: 'wikipedia_live',
+                        lang: 'en'
+                    };
+                    this.cache.set(clean, res);
+                    return res;
+                }
+            }
+        } catch (e) {}
+
         return null;
     }
 
     public static formatWikipediaResponse(article: WikipediaArticleSummary): string {
         const flag = article.lang === 'et' ? '🇪🇪' : '🌐';
         const sourceBadge = article.source === 'wikipedia_live' ? '⚡ Otsepäring Vikipeediast' : '📚 Vikipeedia Entsüklopeedia';
+        const imgMd = article.imageUrl ? `\n\n🖼️ ![${article.title}](${article.imageUrl})\n` : '';
         return `📖 **Vikipeedia (Wikipedia) – ${sourceBadge}:**\n\n` +
             `**${article.title}** ${flag}\n\n` +
-            `${article.extract}\n\n` +
+            `${article.extract}${imgMd}\n\n` +
             `🔗 *Allikas: [Vikipeedia vaba entsüklopeedia](${article.pageUrl || 'https://et.wikipedia.org'})*`;
     }
 }

@@ -168,7 +168,12 @@ export class SceneModifier {
         let entityScale: [number, number, number] = [2, 2, 2];
         let entityColor: any = 0x3b82f6;
 
-        if (lowerRaw.includes('tank')) {
+        if (lowerRaw.includes('a380') || lowerRaw.includes('a 380') || lowerRaw.includes('airbus')) {
+            entityType = 'a380';
+            entityName = 'Airbus A380 Reisilennuk';
+            entityScale = [24, 7, 24];
+            entityColor = 0xffffff;
+        } else if (lowerRaw.includes('tank')) {
             entityType = 'tank';
             entityName = 'Soomustatud Tank';
             entityScale = [10, 4, 6];
@@ -211,6 +216,7 @@ export class SceneModifier {
         }
 
         const propId = 'prop_' + Date.now();
+        const wikiInfo = command.parameters?.wikiArticle;
         scene.objects.push({
             id: propId,
             name: entityName,
@@ -221,9 +227,16 @@ export class SceneModifier {
             isCollidable: true
         });
 
+        let msg = `Lisasin stseeni uue objekti: "${entityName}".`;
+        if (wikiInfo) {
+            msg = `🌐 **Qwen 2.5 Netiotsing & Vikipeedia:** Leidsin vaste "${wikiInfo.title}"!\n*${wikiInfo.extract}*\n\n` +
+                  (wikiInfo.imageUrl ? `🖼️ ![${wikiInfo.title}](${wikiInfo.imageUrl})\n\n` : '') +
+                  `✅ Ehitasin stseeni täpsete proportsioonidega 3D mudeli: "${entityName}".`;
+        }
+
         return {
             success: true,
-            message: `Lisasin stseeni uue objekti: "${entityName}".`,
+            message: msg,
             modifiedScene: scene,
             changedObjectIds: [propId]
         };
