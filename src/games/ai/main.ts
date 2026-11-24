@@ -73,20 +73,14 @@ class PlayardAiApp {
             alert(`✅ Mäng "${scene.title}" edukalt saadetud ülevaatamisele!`);
         });
 
-        // Auto-Enhance Magic Wand button
-        document.getElementById('btn-auto-enhance')?.addEventListener('click', () => {
-            this.handleUserInput('Tee see mäng põnevamaks! Lisa efektid, valgus ja boonused');
-        });
-
-        // Open in Creator Studio
+        // Magic Wand, Creator Studio, Test Play & Code Modal
+        document.getElementById('btn-auto-enhance')?.addEventListener('click', () => this.handleUserInput('Tee see mäng põnevamaks! Lisa efektid, valgus ja boonused'));
         document.getElementById('btn-open-creator')?.addEventListener('click', () => {
             const scene = this.state.getActiveScene();
             if (!scene) return alert('Esmalt genereeri mäng!');
             localStorage.setItem('playard_imported_ai_scene', JSON.stringify(scene));
             window.location.href = '/games/creator/index.html?ai_import=1';
         });
-
-        // Test play
         document.getElementById('btn-test-play')?.addEventListener('click', () => {
             const scene = this.state.getActiveScene();
             if (!scene) return alert('Esmalt genereeri mäng!');
@@ -99,8 +93,6 @@ class PlayardAiApp {
             const modal = document.getElementById('modal-test-play');
             if (modal) modal.style.display = 'none';
         });
-
-        // Close Code Modal
         document.getElementById('btn-close-code-modal')?.addEventListener('click', () => {
             const modal = document.getElementById('modal-code-inspect');
             if (modal) modal.style.display = 'none';
@@ -138,7 +130,13 @@ class PlayardAiApp {
             aiTierService.recordRequest();
         }
 
-        const parsed = await ConversationEngine.parseInput(input, this.state.getActiveScene());
+        this.state.setIsBuilding(true);
+
+        try {
+            // Qwen 2.5 mõtlemispaus (3 täppi '...' animatsioon) enne vastuse genereerimist
+            await new Promise(r => setTimeout(r, (window as any).__FAST_TEST_MODE__ ? 10 : 800));
+
+            const parsed = await ConversationEngine.parseInput(input, this.state.getActiveScene());
 
         // Turvakontroll
         if (parsed.intent === 'SECURITY_VIOLATION') {
@@ -223,12 +221,10 @@ class PlayardAiApp {
             return PlayardGameMatrixEngine.handleBuild(parsed, this.state, () => this.updateHeaderBadges());
         }
 
-        // Planeeri sammud
-        const steps = StepPlanner.planSteps(parsed);
-        this.state.setCurrentSteps(steps);
-        this.state.setIsBuilding(true);
+            // Planeeri sammud
+            const steps = StepPlanner.planSteps(parsed);
+            this.state.setCurrentSteps(steps);
 
-        try {
             if (parsed.intent === 'CONVERT_TO_GAME') {
                 const res = PlayardGameMaker.transformToPlayableGame(this.state.getActiveScene(), parsed.rawText);
                 this.state.setActiveScene(res.scene);

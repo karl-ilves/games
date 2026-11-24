@@ -157,10 +157,26 @@ export class ChatView {
 
         if (isBuilding) {
             html += `
-                <div style="align-self: flex-start; padding: 8px 12px; background: rgba(56, 189, 248, 0.1); border-radius: 12px; font-size: 12px; color: #38bdf8; display: flex; align-items: center; gap: 8px;">
-                    <div class="ai-spinner" style="width: 12px; height: 12px; border: 2px solid #38bdf8; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                    <span>Playard AI ehitab ja testib mängu...</span>
+                <div style="display: flex; flex-direction: column; align-items: flex-start; max-width: 90%; align-self: flex-start; animation: fadeIn 0.2s ease;">
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 11px; color: #94a3b8;">
+                        <span>🤖 Qwen 2.5 (Playard AI 1.1)</span>
+                    </div>
+                    <div class="ai-speech-bubble ai-typing-indicator" style="background: #1e293b; color: #e2e8f0; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 12px 16px; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+                        <span class="ai-dot" style="display: inline-block; width: 7px; height: 7px; background: #38bdf8; border-radius: 50%; animation: aiDotBounce 1.4s infinite ease-in-out both;"></span>
+                        <span class="ai-dot" style="display: inline-block; width: 7px; height: 7px; background: #38bdf8; border-radius: 50%; animation: aiDotBounce 1.4s infinite ease-in-out both; animation-delay: 0.2s;"></span>
+                        <span class="ai-dot" style="display: inline-block; width: 7px; height: 7px; background: #38bdf8; border-radius: 50%; animation: aiDotBounce 1.4s infinite ease-in-out both; animation-delay: 0.4s;"></span>
+                    </div>
                 </div>
+                <style>
+                    @keyframes aiDotBounce {
+                        0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+                        40% { transform: scale(1.15); opacity: 1; }
+                    }
+                    @keyframes fadeIn {
+                        from { opacity: 0; transform: translateY(4px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+                </style>
             `;
         }
 
