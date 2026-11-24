@@ -39,6 +39,7 @@ export function isPAdminUser(usernameOrEmail?: string | null): boolean {
 
 export type FilterPeriod = 'today' | 'week' | 'month';
 export type PAdminTab = 'analytics' | 'updates' | 'servers';
+export type ServerTrafficStatus = 'offline' | 'waiting' | 'busy'; // offline: punane (ei tööta), waiting: punane+roheline (ootab ülesannet), busy: roheline (teeb midagi)
 
 export interface ProfileRecord {
     createdAt: string;
@@ -63,6 +64,15 @@ let cachedProfiles: ProfileRecord[] | null = null;
 let cachedGames: GameRecord[] | null = null;
 let activePeriod: FilterPeriod = 'week'; // Default to week (7 viimast päeva)
 let activePAdminTab: PAdminTab = 'analytics'; // Default to Analüütika
+let currentServerStatus: ServerTrafficStatus = 'waiting'; // Praegu server käivitatud, Playard peal, ootab ülesannet
+let currentServerTaskDescription: string = 'Server on võrgus (192.168.1.219). Playard paigaldatud, ootab ülesannet.';
+
+export function setServerTrafficStatus(status: ServerTrafficStatus, taskDescription?: string) {
+    currentServerStatus = status;
+    if (taskDescription !== undefined) {
+        currentServerTaskDescription = taskDescription;
+    }
+}
 
 async function fetchAccountsData(): Promise<ProfileRecord[]> {
     if (cachedProfiles) return cachedProfiles;
@@ -795,7 +805,7 @@ function renderPAdminDashboard(
                 </div>
             </div>
 
-            <!-- Hall kast keskel koos tuledega (punane ja roheline tuli kõrval, praegu punane põleb) -->
+            <!-- Serveri liiklusvalgusfoor (punane: ei tööta, punane+roheline: ootab ülesannet, roheline: teeb midagi) -->
             <div id="padmin-server-image-container" style="
                 display: flex;
                 flex-direction: row;
@@ -814,36 +824,77 @@ function renderPAdminDashboard(
                     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
                 "></div>
 
-                <!-- Tuled kõrval (punane ja roheline) -->
+                <!-- Tuled kõrval (Valgusfoor: punane ja roheline) -->
                 <div id="padmin-server-leds" style="
                     display: flex;
                     flex-direction: column;
-                    gap: 14px;
-                    padding: 12px;
-                    background: #f1f5f9;
-                    border: 1px solid #cbd5e1;
-                    border-radius: 14px;
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+                    gap: 16px;
+                    padding: 14px 12px;
+                    background: #0f172a;
+                    border: 2px solid #334155;
+                    border-radius: 16px;
+                    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
                 ">
-                    <!-- Punane tuli (praegu põleb / aktiivne) -->
-                    <div id="padmin-led-red" title="Punane tuli (Aktiivne)" style="
-                        width: 18px;
-                        height: 18px;
+                    <!-- Punane tuli -->
+                    <div id="padmin-led-red" title="${currentServerStatus === 'offline' ? 'Punane: Ei tööta' : (currentServerStatus === 'waiting' ? 'Punane + Roheline: Ootab ülesannet' : 'Punane: Väljas')}" style="
+                        width: 20px;
+                        height: 20px;
                         border-radius: 50%;
-                        background: #ef4444;
-                        box-shadow: 0 0 14px #ef4444, 0 0 4px #dc2626;
-                        border: 2px solid #b91c1c;
+                        background: ${currentServerStatus === 'offline' || currentServerStatus === 'waiting' ? '#ef4444' : '#450a0a'};
+                        box-shadow: ${currentServerStatus === 'offline' || currentServerStatus === 'waiting' ? '0 0 16px #ef4444, 0 0 6px #dc2626' : 'none'};
+                        border: 2px solid ${currentServerStatus === 'offline' || currentServerStatus === 'waiting' ? '#b91c1c' : '#1f2937'};
+                        opacity: ${currentServerStatus === 'offline' || currentServerStatus === 'waiting' ? '1' : '0.25'};
+                        transition: all 0.3s ease;
                     "></div>
 
-                    <!-- Roheline tuli (väljas / ootel) -->
-                    <div id="padmin-led-green" title="Roheline tuli (Väljas)" style="
-                        width: 18px;
-                        height: 18px;
+                    <!-- Roheline tuli -->
+                    <div id="padmin-led-green" title="${currentServerStatus === 'busy' ? 'Roheline: Teeb midagi' : (currentServerStatus === 'waiting' ? 'Punane + Roheline: Ootab ülesannet' : 'Roheline: Väljas')}" style="
+                        width: 20px;
+                        height: 20px;
                         border-radius: 50%;
-                        background: #14532d;
-                        border: 2px solid #052e16;
-                        opacity: 0.35;
+                        background: ${currentServerStatus === 'busy' || currentServerStatus === 'waiting' ? '#22c55e' : '#052e16'};
+                        box-shadow: ${currentServerStatus === 'busy' || currentServerStatus === 'waiting' ? '0 0 16px #22c55e, 0 0 6px #16a34a' : 'none'};
+                        border: 2px solid ${currentServerStatus === 'busy' || currentServerStatus === 'waiting' ? '#15803d' : '#1f2937'};
+                        opacity: ${currentServerStatus === 'busy' || currentServerStatus === 'waiting' ? '1' : '0.25'};
+                        transition: all 0.3s ease;
                     "></div>
+                </div>
+            </div>
+
+            <!-- All tekst, mida server teeb -->
+            <div id="padmin-server-status-info" style="
+                margin-top: 8px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 8px;
+                text-align: center;
+            ">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 0.82rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 10px; border-radius: 9999px; ${
+                        currentServerStatus === 'offline'
+                            ? 'background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;'
+                            : currentServerStatus === 'waiting'
+                            ? 'background: #fef3c7; color: #92400e; border: 1px solid #fde68a;'
+                            : 'background: #dcfce7; color: #166534; border: 1px solid #bbf7d0;'
+                    }">
+                        ${
+                            currentServerStatus === 'offline'
+                                ? '🔴 Ei tööta'
+                                : currentServerStatus === 'waiting'
+                                ? '🟡 Ootab ülesannet (Punane + Roheline)'
+                                : '🟢 Teeb midagi (Roheline)'
+                        }
+                    </span>
+                </div>
+                <div id="padmin-server-task-desc" style="
+                    font-size: 0.95rem;
+                    font-weight: 700;
+                    color: #334155;
+                    max-width: 600px;
+                    line-height: 1.5;
+                ">
+                    ${currentServerTaskDescription}
                 </div>
             </div>
         </div>
