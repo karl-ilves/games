@@ -298,37 +298,6 @@ export class ModelsPlansModal {
                             Optimeeritud mudel Playard 3D maailmade ehitamiseks, skriptimiseks, füüsika arvutamiseks ja semantiliseks sünteesiks.
                         </p>
                     </div>
-
-                    <!-- Model 2: Playard game ai 1.2 -->
-                    <div style="background: rgba(30, 41, 59, 0.7); border: 2px solid ${selectedModel === 'playard_game_ai_1_2' ? '#a855f7' : 'rgba(255, 255, 255, 0.1)'}; border-radius: 14px; padding: 16px; box-shadow: ${selectedModel === 'playard_game_ai_1_2' ? '0 0 20px rgba(168, 85, 247, 0.25)' : 'none'};">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <div style="font-size: 28px; width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, #7c3aed, #a855f7); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);">
-                                    🧠✨
-                                </div>
-                                <div>
-                                    <h4 style="margin: 0; font-size: 16px; font-weight: 800; color: #ffffff; letter-spacing: -0.2px; display: flex; align-items: center; gap: 6px;">
-                                        Playard game ai 1.2
-                                        <span style="background: rgba(168, 85, 247, 0.25); border: 1px solid #a855f7; color: #c084fc; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 10px;">🧠 Palju Targem</span>
-                                    </h4>
-                                    <span style="font-size: 11px; color: #c084fc; font-weight: 600;">🧠 Palju targem tehisintellekt & reaalajas assistent</span>
-                                </div>
-                            </div>
-                            ${selectedModel === 'playard_game_ai_1_2' ? `
-                                <span style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; display: flex; align-items: center; gap: 4px;">
-                                    <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #10b981;"></span>
-                                    Aktiivne
-                                </span>
-                            ` : `
-                                <button type="button" class="btn-select-model" data-model="playard_game_ai_1_2" style="background: linear-gradient(135deg, #7c3aed, #a855f7); border: none; color: #ffffff; font-size: 11px; font-weight: 800; padding: 6px 14px; border-radius: 8px; cursor: pointer;">
-                                    Vali see mudel
-                                </button>
-                            `}
-                        </div>
-                        <p style="margin: 0; font-size: 12px; color: #cbd5e1; line-height: 1.5;">
-                            Palju targem tehisintellekt (Antigravity/Playard AI). Jälgib reaalajas mida keegi kirjutab, analüüsib konteksti ja vastab täpselt ning nutikalt.
-                        </p>
-                    </div>
                 </div>
 
                 <!-- Limits & Usage Container -->

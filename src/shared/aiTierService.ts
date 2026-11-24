@@ -3,7 +3,7 @@ import { getCurrentUserProfile, isPlayardOwner, isUserAdminEmail } from '../auth
 
 export type PlayardAiTier = 'FREE' | 'PRO' | 'PLUS' | 'VIP';
 
-export type PlayardAiModelId = 'playard_game_ai_1_1' | 'playard_game_ai_1_2' | 'play_ai_2' | 'play_ai_2_2';
+export type PlayardAiModelId = 'playard_game_ai_1_1' | 'play_ai_2' | 'play_ai_2_2';
 
 export interface PlayardAiModelConfig {
     id: PlayardAiModelId;
@@ -26,17 +26,6 @@ export const PLAYARD_AI_MODELS: Record<string, PlayardAiModelConfig> = {
         description: 'Optimeeritud mudel Playard 3D maailmade ehitamiseks, skriptimiseks, füüsika arvutamiseks ja semantiliseks sünteesiks.',
         icon: '🤖',
         badge: 'Universaalne',
-        vipOnly: false,
-        has5hLimit: true,
-        has5dLimit: true
-    },
-    playard_game_ai_1_2: {
-        id: 'playard_game_ai_1_2',
-        name: 'Playard game ai 1.2',
-        subtitle: '🧠 Palju targem tehisintellekt & reaalajas assistent',
-        description: 'Palju targem ja täpsem AI mudel. Jälgib mida mängijad kirjutavad, mõistab konteksti süvitsi ja vastab nutikalt igale soovile.',
-        icon: '🧠✨',
-        badge: 'Palju Targem',
         vipOnly: false,
         has5hLimit: true,
         has5dLimit: true
@@ -295,25 +284,11 @@ export class AiTierService {
     public getSelectedModel(): PlayardAiModelId {
         try {
             const raw = localStorage.getItem(STORAGE_KEY_MODEL);
-            if (raw === 'playard_game_ai_1_2') {
-                return 'playard_game_ai_1_2';
-            }
             if (raw === 'play_ai_2') {
                 return 'play_ai_2';
             }
             if (raw === 'play_ai_2_2') {
                 return 'play_ai_2_2';
-            }
-        } catch (e) {}
-
-        try {
-            const prof = getCurrentUserProfile();
-            if (prof) {
-                const u = (prof.username || '').toLowerCase();
-                const e = (prof.email || '').toLowerCase();
-                if (isPlayardOwner(e) || isPlayardOwner(u) || u === 'playard owner' || prof.isAdmin) {
-                    return 'playard_game_ai_1_2';
-                }
             }
         } catch (e) {}
 

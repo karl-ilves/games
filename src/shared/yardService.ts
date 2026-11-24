@@ -576,7 +576,7 @@ class YardService {
                             };
                             localStorage.setItem('playard_ai_tier_subscription', JSON.stringify(subData));
                             if (tier === 'VIP' || isOwner) {
-                                localStorage.setItem('playard_ai_selected_model', 'playard_game_ai_1_2');
+                                localStorage.setItem('playard_ai_selected_model', 'playard_game_ai_1_1');
                             }
                             window.dispatchEvent(new CustomEvent('playard_ai_tier_changed', { detail: { tier } }));
                         }
@@ -605,7 +605,7 @@ class YardService {
             if (inventory.includes('ai_tier_vip') || isOwner) {
                 const subData = { tier: 'VIP', subscribedAt: Date.now(), expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000 };
                 localStorage.setItem('playard_ai_tier_subscription', JSON.stringify(subData));
-                localStorage.setItem('playard_ai_selected_model', 'playard_game_ai_1_2');
+                localStorage.setItem('playard_ai_selected_model', 'playard_game_ai_1_1');
                 window.dispatchEvent(new CustomEvent('playard_ai_tier_changed', { detail: { tier: 'VIP' } }));
             } else if (inventory.includes('ai_tier_plus')) {
                 const subData = { tier: 'PLUS', subscribedAt: Date.now(), expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000 };

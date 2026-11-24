@@ -14352,18 +14352,9 @@ await (async () => {
                 const bodyHtml = document.getElementById('models-modal-dynamic-body')?.innerHTML || '';
 
                 const hasModel11 = bodyHtml.includes('Playard game ai 1.1');
-                const hasModel12 = bodyHtml.includes('Playard game ai 1.2');
-                const hasNoOtherModels = !bodyHtml.includes('PlayAi 2.1') && !bodyHtml.includes('PlayAi 2.2');
+                const hasNoOtherModels = !bodyHtml.includes('PlayAi 2.1') && !bodyHtml.includes('PlayAi 2.2') && !bodyHtml.includes('Playard game ai 1.2');
                 const hasSvgRing = bodyHtml.includes('<svg') && bodyHtml.includes('stroke-dasharray');
                 const hasRemainingCounter = bodyHtml.includes('jäänud');
-
-                // Test selecting Playard game ai 1.2
-                const select12Btn = document.querySelector('.btn-select-model[data-model="playard_game_ai_1_2"]');
-                if (select12Btn) {
-                    select12Btn.click();
-                    await new Promise(r => setTimeout(r, 100));
-                }
-                const model12Selected = window.aiTierService.getSelectedModel() === 'playard_game_ai_1_2';
 
                 // Switch to Plans tab
                 btnTabPlans?.click();
@@ -14378,7 +14369,7 @@ await (async () => {
                 // Switch back to Model tab
                 btnTabModel?.click();
                 await new Promise(r => setTimeout(r, 100));
-                const switchedBackModel = (document.getElementById('models-modal-dynamic-body')?.innerHTML || '').includes('Playard game ai 1.2');
+                const switchedBackModel = (document.getElementById('models-modal-dynamic-body')?.innerHTML || '').includes('Playard game ai 1.1');
 
                 // Close modal
                 btnClose?.click();
@@ -14399,8 +14390,6 @@ await (async () => {
                     initialHidden,
                     modalOpened,
                     hasModel11,
-                    hasModel12,
-                    model12Selected,
                     hasNoOtherModels,
                     hasSvgRing,
                     hasRemainingCounter,
@@ -14417,38 +14406,17 @@ await (async () => {
             console.log("   AI Models & Plans Modal Test Results:", modelsModalTest);
             if (
                 !modelsModalTest.ok || !modelsModalTest.initialHidden ||
-                !modelsModalTest.modalOpened || !modelsModalTest.hasModel11 || !modelsModalTest.hasModel12 ||
-                !modelsModalTest.model12Selected || !modelsModalTest.hasNoOtherModels ||
+                !modelsModalTest.modalOpened || !modelsModalTest.hasModel11 ||
+                !modelsModalTest.hasNoOtherModels ||
                 !modelsModalTest.hasSvgRing || !modelsModalTest.hasRemainingCounter ||
                 !modelsModalTest.hasPlans || !modelsModalTest.hasNewLimits || !modelsModalTest.hasNoPlanAfterVip || !modelsModalTest.hasTierButtons ||
                 !modelsModalTest.switchedBackModel || !modelsModalTest.modalClosed
             ) {
                 throw new Error("AI Models & Plans Modal test failed: " + JSON.stringify(modelsModalTest));
             }
-            console.log("   ✅ AI Models & Plans Modal (Playard game ai 1.1 & 1.2, limits 5/10/20/30, plans up to VIP) verified successfully!");
+            console.log("   ✅ AI Models & Plans Modal (Strictly Playard game ai 1.1, limits 5/10/20/30, plans up to VIP) verified successfully!");
 
-            // 22z. Verify Playard game ai 1.2 live watcher & identity response
-            console.log("   Verifying Playard game ai 1.2 live watcher & identity response...");
-            const identity12Test = await page.evaluate(async () => {
-                const ai = window.playardAi;
-                window.aiTierService.setSelectedModel('playard_game_ai_1_2');
-                await ai.handleUserInput('Kes sa oled?');
-                await new Promise(r => setTimeout(r, 200));
-                const msgs = ai.state.getMessages();
-                const lastMsg = msgs[msgs.length - 1]?.text || '';
-                return {
-                    has12: lastMsg.includes('Playard game ai 1.2'),
-                    hasAntigravity: lastMsg.includes('Antigravity') || lastMsg.includes('targem'),
-                    hasWatching: lastMsg.includes('jälgin') && lastMsg.includes('kirjutab')
-                };
-            });
-            console.log("   Playard game ai 1.2 Identity & Watcher Results:", identity12Test);
-            if (!identity12Test.has12 || !identity12Test.hasWatching) {
-                throw new Error("Playard game ai 1.2 identity / watcher verification failed: " + JSON.stringify(identity12Test));
-            }
-            console.log("   ✅ Playard game ai 1.2 (Antigravity live watcher & smart identity) verified successfully!");
-
-            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge, Sky System, 3D Spatial Engine, Image Gen, PYGA, Game Maker, Hybrid 8000, 100,000+ Game Matrix, Magic Wand, Models/Plans Modal & Playard AI 1.2 Live Watcher) tests passed successfully!");
+            console.log("✅ 🤖 Playard AI (Genres, Pipeline, Code Engine, UI Gen, Anti-Hallucination, Facts, Technical Compiler, 10/10 Systems, Universal Omni, Tri-Mode Triage, Natural Math, Wikipedia Knowledge, Sky System, 3D Spatial Engine, Image Gen, PYGA, Game Maker, Hybrid 8000, 100,000+ Game Matrix, Magic Wand & Models/Plans Modal strictly Playard game ai 1.1) tests passed successfully!");
 
 
 
