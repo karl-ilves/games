@@ -342,21 +342,10 @@ export function setupModals() {
 
     // 5. Create Game Floating & Hub Buttons
     const handleCreateGameClick = () => {
-        const profile = getCurrentUserProfile();
-        if (!profile) {
-            alert('🔒 You must have an account to create games. Please login or register above!');
-            const authElem = document.getElementById('auth-container');
-            if (authElem) {
-                authElem.scrollIntoView({ behavior: 'smooth' });
-                authElem.style.border = '2px solid #00f2fe';
-                setTimeout(() => authElem.style.border = '1px solid rgba(255,255,255,0.08)', 2000);
-            }
-            return;
-        }
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
         if (isMobile) {
-            alert('💻 Game Creator is only available on a computer or laptop!\n\nYou need a keyboard and mouse to build 3D games.');
-            return;
+            const proceed = confirm('💻 Game Creator on optimeeritud arvutile (klaviatuur ja hiir).\n\nKas soovid sellegipoolest avada 3D Game Creator Studio?');
+            if (!proceed) return;
         }
         window.location.href = './games/creator/index.html';
     };
