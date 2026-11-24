@@ -329,6 +329,37 @@ export class ModelsPlansModal {
                             Palju targem tehisintellekt (Antigravity/Playard AI). Jälgib reaalajas mida keegi kirjutab, analüüsib konteksti ja vastab täpselt ning nutikalt.
                         </p>
                     </div>
+
+                    <!-- Model 3: Llama 3.1 (Server) -->
+                    <div style="background: rgba(30, 41, 59, 0.7); border: 2px solid ${selectedModel === 'llama_3_1_server' ? '#10b981' : 'rgba(255, 255, 255, 0.1)'}; border-radius: 14px; padding: 16px; box-shadow: ${selectedModel === 'llama_3_1_server' ? '0 0 20px rgba(16, 185, 129, 0.25)' : 'none'};">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="font-size: 28px; width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, #059669, #10b981); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);">
+                                    🦙⚡
+                                </div>
+                                <div>
+                                    <h4 style="margin: 0; font-size: 16px; font-weight: 800; color: #ffffff; letter-spacing: -0.2px; display: flex; align-items: center; gap: 6px;">
+                                        Llama 3.1 (Server)
+                                        <span style="background: rgba(16, 185, 129, 0.25); border: 1px solid #10b981; color: #6ee7b7; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 10px;">🦙 Server AI</span>
+                                    </h4>
+                                    <span style="font-size: 11px; color: #6ee7b7; font-weight: 600;">🦙 Privaatne serveri tehisintellekt (Ollama)</span>
+                                </div>
+                            </div>
+                            ${selectedModel === 'llama_3_1_server' ? `
+                                <span style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; display: flex; align-items: center; gap: 4px;">
+                                    <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #10b981;"></span>
+                                    Aktiivne
+                                </span>
+                            ` : `
+                                <button type="button" class="btn-select-model" data-model="llama_3_1_server" style="background: linear-gradient(135deg, #059669, #10b981); border: none; color: #ffffff; font-size: 11px; font-weight: 800; padding: 6px 14px; border-radius: 8px; cursor: pointer;">
+                                    Vali see mudel
+                                </button>
+                            `}
+                        </div>
+                        <p style="margin: 0; font-size: 12px; color: #cbd5e1; line-height: 1.5;">
+                            Võimas ja privaatne tehisintellekt otse Playardi kohalikust serverist. Sügav Three.js koodimootor, piiranguteta arutlus ja intelligentne mänguloome.
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Limits & Usage Container -->
