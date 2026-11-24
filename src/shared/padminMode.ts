@@ -65,7 +65,7 @@ let cachedGames: GameRecord[] | null = null;
 let activePeriod: FilterPeriod = 'week'; // Default to week (7 viimast päeva)
 let activePAdminTab: PAdminTab = 'analytics'; // Default to Analüütika
 let currentServerStatus: ServerTrafficStatus = 'waiting'; // Praegu server käivitatud, Playard peal, ootab ülesannet
-let currentServerTaskDescription: string = 'Server on võrgus (192.168.1.219). Playard paigaldatud, ootab ülesannet.';
+let currentServerTaskDescription: string = 'Server on võrgus. Playard paigaldatud, ootab ülesannet.';
 
 export function setServerTrafficStatus(status: ServerTrafficStatus, taskDescription?: string) {
     currentServerStatus = status;
