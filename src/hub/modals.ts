@@ -7,6 +7,7 @@ import { renderDatabaseGamesList } from './communityGames';
 import { bindPlayerSuggestions } from '../shared/playerSuggestions';
 import { setUserPlusTier, getUserPlusTier, PlusTier } from '../shared/plusMembership';
 import { showYardPurchaseConfirm } from '../shared/yardPurchaseModal';
+import { launchInHubGameContainer } from './gamePreviewModal';
 
 export function setupModals() {
     // 1. Streak Modal (Opened via Daily Rewards button)
@@ -347,7 +348,7 @@ export function setupModals() {
             const proceed = confirm('💻 Game Creator on optimeeritud arvutile (klaviatuur ja hiir).\n\nKas soovid sellegipoolest avada 3D Game Creator Studio?');
             if (!proceed) return;
         }
-        window.location.href = './games/creator/index.html';
+        launchInHubGameContainer('./games/creator/index.html', '🛠️ 3D Game Creator Studio');
     };
 
     document.getElementById('btn-create-game')?.addEventListener('click', handleCreateGameClick);

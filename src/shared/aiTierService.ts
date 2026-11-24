@@ -3,7 +3,7 @@ import { getCurrentUserProfile, isPlayardOwner, isUserAdminEmail } from '../auth
 
 export type PlayardAiTier = 'FREE' | 'PRO' | 'PLUS' | 'VIP';
 
-export type PlayardAiModelId = 'playard_game_ai_1_1' | 'playard_game_ai_1_2' | 'llama_3_1_server' | 'play_ai_2' | 'play_ai_2_2';
+export type PlayardAiModelId = 'playard_game_ai_1_1' | 'playard_game_ai_1_2' | 'play_ai_2' | 'play_ai_2_2';
 
 export interface PlayardAiModelConfig {
     id: PlayardAiModelId;
@@ -40,17 +40,6 @@ export const PLAYARD_AI_MODELS: Record<string, PlayardAiModelConfig> = {
         vipOnly: false,
         has5hLimit: true,
         has5dLimit: true
-    },
-    llama_3_1_server: {
-        id: 'llama_3_1_server',
-        name: 'Llama 3.1 (Server)',
-        subtitle: '🦙 Privaatne serveri tehisintellekt (Ollama)',
-        description: 'Võimas, privaatne ja piiranguteta tehisintellekt otse Playardi kohalikust serverist. Sügav koodiloogika, Three.js 3D maailmade ehitamine ja intelligentne vestlus.',
-        icon: '🦙⚡',
-        badge: 'Server AI',
-        vipOnly: false,
-        has5hLimit: false,
-        has5dLimit: false
     }
 };
 
@@ -308,9 +297,6 @@ export class AiTierService {
             const raw = localStorage.getItem(STORAGE_KEY_MODEL);
             if (raw === 'playard_game_ai_1_2') {
                 return 'playard_game_ai_1_2';
-            }
-            if (raw === 'llama_3_1_server') {
-                return 'llama_3_1_server';
             }
             if (raw === 'play_ai_2') {
                 return 'play_ai_2';
