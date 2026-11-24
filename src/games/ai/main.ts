@@ -239,6 +239,13 @@ class PlayardAiApp {
                 await PygaEngine.handleBuild(parsed, this.state, () => this.updateHeaderBadges());
             } else if (parsed.intent === 'CREATE_GAME') {
                 await this.executeGameCreation(parsed);
+            } else if (parsed.intent === 'HELP_OR_CHAT') {
+                const nRes = await GeminiCloudEngine.getInstance().queryNeural(parsed.rawText, this.state.getActiveScene());
+                if (nRes.success && nRes.modelUsed.includes('qwen')) {
+                    this.state.addAiMessage(nRes.text);
+                } else {
+                    await this.executeModification(parsed);
+                }
             } else {
                 await this.executeModification(parsed);
             }
@@ -319,9 +326,7 @@ class PlayardAiApp {
             status: 'success'
         });
 
-        this.state.addAiMessage(
-            `${result.message}\n\nAutomaatkontroll: ${verification.summary}`
-        );
+        this.state.addAiMessage(`${result.message}\n\nAutomaatkontroll: ${verification.summary}`);
     }
 
     private showCodeModal(code: string) {
@@ -329,7 +334,6 @@ class PlayardAiApp {
         const codePre = document.getElementById('code-inspect-content');
         if (modal && codePre) { codePre.textContent = code; modal.style.display = 'flex'; }
     }
-
     public applyTexture(url: string) {
         if (this.viewport?.applyTextureToActiveObject(url)) this.state.addAiMessage('🧱 Rakendasin genereeritud tekstuuri aktiivsele 3D objektile!');
     }

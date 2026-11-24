@@ -125,6 +125,36 @@ export class GeminiCloudEngine {
             };
         }
 
+        // 2. Proovi esmalt päringut teha Raspberry Pi 3 Qwen 2.5 serverisse (192.168.1.219:11434)
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 12000);
+            const piResp = await fetch('http://192.168.1.219:11434/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                signal: controller.signal,
+                body: JSON.stringify({
+                    model: 'qwen2.5:0.5b',
+                    prompt: `Oled Playard AI abiline. Vasta lühidalt ja abivalmilt eesti keeles kasutaja soovile: ${prompt}`,
+                    stream: false
+                })
+            });
+            clearTimeout(timeoutId);
+            if (piResp.ok) {
+                const piData = await piResp.json();
+                if (piData && piData.response) {
+                    return {
+                        success: true,
+                        text: `🤖 **Qwen 2.5 (0.5B Raspberry Pi 3):**\n\n${piData.response.trim()}`,
+                        modelUsed: 'qwen2.5:0.5b-raspberry-pi',
+                        latencyMs: Math.round(performance.now() - startTime)
+                    };
+                }
+            }
+        } catch (e) {
+            // Kui Raspberry Pi ei vasta brauseri CORS-i või võrgu tõttu, liigutakse edasi
+        }
+
         const apiKey = this.getApiKey();
         if (!apiKey) {
             return {
