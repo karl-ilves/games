@@ -2995,7 +2995,10 @@ export async function executeAiBuild(promptText: string, imageDataUrl?: string |
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 8000);
-                const piResp = await fetch('http://192.168.1.219:11434/api/generate', {
+                const ollamaUrl = typeof window !== 'undefined' && window.location && window.location.origin.includes('playardgames.com')
+                    ? `${window.location.origin}/ollama/api/generate`
+                    : 'http://192.168.1.219:11434/api/generate';
+                const piResp = await fetch(ollamaUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     signal: controller.signal,
