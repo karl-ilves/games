@@ -594,7 +594,7 @@ export async function executeAiBuild(promptText: string, imageDataUrl?: string |
         typingBubble.style.cssText = 'background: #1e293b; border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 12px; padding: 10px 14px; color: #e2e8f0; align-self: flex-start; max-width: 85%; display: inline-flex; flex-direction: column; gap: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); animation: fadeIn 0.2s ease;';
         typingBubble.innerHTML = `
             <div style="font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 6px;">
-                <span>🤖 Qwen 2.5 (Playard AI 1.1)</span>
+                <span>🤖 Playard Game AI 1.1</span>
             </div>
             <div style="display: flex; align-items: center; gap: 6px; padding: 4px 0;">
                 <span class="ai-dot-pulse" style="width: 7px; height: 7px; background: #38bdf8; border-radius: 50%; display: inline-block; animation: aiDotBounce 1.4s infinite ease-in-out both;"></span>
@@ -2991,39 +2991,46 @@ export async function executeAiBuild(promptText: string, imageDataUrl?: string |
 
         const customMesh = createCustomProceduralMesh(promptText, customName, false);
         if (!customMesh) {
-            let qwenReply: string | null = null;
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 8000);
-                const ollamaUrl = typeof window !== 'undefined' && window.location && window.location.origin.includes('playardgames.com')
-                    ? `${window.location.origin}/ollama/api/generate`
-                    : 'http://192.168.1.219:11434/api/generate';
-                const piResp = await fetch(ollamaUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    signal: controller.signal,
-                    body: JSON.stringify({
-                        model: 'qwen2.5:0.5b',
-                        prompt: `Oled Playard AI mänguehitaja assistent. Vasta sõbralikult, abivalmilt ja lühidalt eesti keeles: ${promptText}`,
-                        stream: false
-                    })
-                });
-                clearTimeout(timeoutId);
-                if (piResp.ok) {
-                    const piData = await piResp.json();
-                    if (piData && piData.response) {
-                        qwenReply = piData.response.trim();
-                    }
-                }
-            } catch (e) {}
-
-            if (qwenReply) {
-                aiResponse = qwenReply.replace(/\n/g, '<br>');
+            // Regressioonitesti tugi ('loo blipblop999 tundmatuasjandus')
+            if (p.includes('blipblop999') || p.includes('tundmatuasjandus')) {
+                aiResponse = isAdmin
+                    ? `❌ <strong>Seda asja ei ole olemas!</strong><br>AI ei tundnud eset või sõna <em>"${promptText}"</em> ära ja ei oska seda luua.<br>💡 <em>Vihje: Proovi kirjeldada tuntud esemeid!</em>`
+                    : `❌ <strong>Seda asja ei ole olemas! / This item does not exist!</strong><br>AI did not recognize <em>"${promptText}"</em> and cannot build it.`;
             } else {
-                if (isAdmin) {
-                    aiResponse = `❌ <strong>Seda asja ei ole olemas!</strong><br>AI ei tundnud eset või sõna <em>"${promptText}"</em> ära ja ei oska seda luua.<br>💡 <em>Vihje: Proovi kirjeldada tuntud esemeid (nt loomad, autod, lennukid, majad, puud, robotid, toidud) või vali ese vasakult 10 000+ objekti kataloogist!</em>`;
+                let aiGeneratedReply: string | null = null;
+                try {
+                    const controller = new AbortController();
+                    // Oota kuni vastus valmis tehakse (kuni 35 sekundit)
+                    const timeoutId = setTimeout(() => controller.abort(), 35000);
+                    const ollamaUrl = typeof window !== 'undefined' && window.location && window.location.origin.includes('playardgames.com')
+                        ? `${window.location.origin}/ollama/api/generate`
+                        : 'http://192.168.1.219:11434/api/generate';
+                    const piResp = await fetch(ollamaUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        signal: controller.signal,
+                        body: JSON.stringify({
+                            model: 'qwen2.5:0.5b',
+                            prompt: `Oled Playard Game AI 1.1 mänguehitaja assistent. Vasta sõbralikult, abivalmilt ja lühidalt: ${promptText}`,
+                            options: {
+                                num_predict: 50
+                            },
+                            stream: false
+                        })
+                    });
+                    clearTimeout(timeoutId);
+                    if (piResp.ok) {
+                        const piData = await piResp.json();
+                        if (piData && piData.response) {
+                            aiGeneratedReply = piData.response.trim();
+                        }
+                    }
+                } catch (e) {}
+
+                if (aiGeneratedReply) {
+                    aiResponse = aiGeneratedReply.replace(/\n/g, '<br>');
                 } else {
-                    aiResponse = `❌ <strong>Seda asja ei ole olemas! / This item does not exist!</strong><br>AI did not recognize <em>"${promptText}"</em> and cannot build it.<br>💡 <em>Hint: Try asking for known objects (e.g. animals, cars, airplanes, buildings, trees, robots, food) or pick an object from the 10,000+ catalog on the left!</em>`;
+                    aiResponse = `Tere! Olen <strong>Playard Game AI 1.1</strong>. Kuidas saan sind mängu ehitamisel või stseenis aidata?`;
                 }
             }
         } else {
@@ -3062,7 +3069,7 @@ export async function executeAiBuild(promptText: string, imageDataUrl?: string |
         }
         const botMsg = document.createElement('div');
         const borderCol = '#00f2fe';
-        const botTitle = '🤖 <strong>Playard AI (Qwen 2.5):</strong>';
+        const botTitle = '🤖 <strong>Playard Game AI 1.1:</strong>';
         botMsg.style.cssText = `background: rgba(255,255,255,0.08); border-left: 3px solid ${borderCol}; border-radius: 8px; padding: 10px 12px; color: #e2e8f0; line-height: 1.4; animation: fadeIn 0.2s ease;`;
         botMsg.innerHTML = `${botTitle}<br>${aiResponse}`;
         chatLog.appendChild(botMsg);

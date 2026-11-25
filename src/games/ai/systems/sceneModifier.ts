@@ -229,7 +229,7 @@ export class SceneModifier {
 
         let msg = `Lisasin stseeni uue objekti: "${entityName}".`;
         if (wikiInfo) {
-            msg = `🌐 **Qwen 2.5 Netiotsing & Vikipeedia:** Leidsin vaste "${wikiInfo.title}"!\n*${wikiInfo.extract}*\n\n` +
+            msg = `🌐 **Playard Game AI 1.1 Netiotsing & Vikipeedia:** Leidsin vaste "${wikiInfo.title}"!\n*${wikiInfo.extract}*\n\n` +
                   (wikiInfo.imageUrl ? `🖼️ ![${wikiInfo.title}](${wikiInfo.imageUrl})\n\n` : '') +
                   `✅ Ehitasin stseeni täpsete proportsioonidega 3D mudeli: "${entityName}".`;
         }

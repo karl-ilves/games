@@ -148,8 +148,8 @@ export class GeminiCloudEngine {
                 if (piData && piData.response) {
                     return {
                         success: true,
-                        text: `🤖 **Qwen 2.5 (0.5B Raspberry Pi 3):**\n\n${piData.response.trim()}`,
-                        modelUsed: 'qwen2.5:0.5b-raspberry-pi',
+                        text: `🤖 **Playard Game AI 1.1:**\n\n${piData.response.trim()}`,
+                        modelUsed: 'playard-game-ai-1.1',
                         latencyMs: Math.round(performance.now() - startTime)
                     };
                 }
