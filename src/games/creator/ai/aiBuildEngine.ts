@@ -736,37 +736,10 @@ export async function executeAiBuild(promptText: string, imageDataUrl?: string |
         performRedo();
         aiResponse = isAdmin ? `↪️ <strong>Tegevus uuesti rakendatud (Redo)!</strong>` : `↪️ <strong>Action redone!</strong>`;
 
-    // --- 0.01 PLAYARD GENERAL KNOWLEDGE & ANTI-HALLUCINATION GUARD (Qwen 2.5 Priority) ---
+    // --- 0.01 PLAYARD GENERAL KNOWLEDGE & ANTI-HALLUCINATION GUARD ---
     } else if (PlayardGeneralKnowledge.answerQuestion(promptText) !== null) {
-        let qwenReply: string | null = null;
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 6000);
-            const piResp = await fetch('http://192.168.1.219:11434/api/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                signal: controller.signal,
-                body: JSON.stringify({
-                    model: 'qwen2.5:0.5b',
-                    prompt: `Oled Playard AI. Vasta lühidalt ja asjalikult eesti keeles: ${promptText}`,
-                    stream: false
-                })
-            });
-            clearTimeout(timeoutId);
-            if (piResp.ok) {
-                const piData = await piResp.json();
-                if (piData && piData.response) {
-                    qwenReply = piData.response.trim();
-                }
-            }
-        } catch (e) {}
-
-        if (qwenReply) {
-            aiResponse = `🤖 <strong>Qwen 2.5 (Raspberry Pi 3):</strong><br>${qwenReply}`;
-        } else {
-            const fact = PlayardGeneralKnowledge.answerQuestion(promptText)!;
-            aiResponse = `🧠 <strong>Playard AI Teadmistebaas:</strong><br>${fact}`;
-        }
+        const fact = PlayardGeneralKnowledge.answerQuestion(promptText)!;
+        aiResponse = `🧠 <strong>Playard AI Teadmistebaas:</strong><br>${fact}`;
 
     // --- 0.02 PLAYARD 7-STAGE DEVELOPMENT PIPELINE ---
     } else if (p.includes('pipeline') || p.includes('arenduskonveier') || p.includes('arendustsükkel') || /^(etapp|samm|stage)\s*([1-7]|idea|plaan|loomine|kood|testimine|parandamine|avaldamine)/i.test(p)) {
@@ -3018,10 +2991,37 @@ export async function executeAiBuild(promptText: string, imageDataUrl?: string |
 
         const customMesh = createCustomProceduralMesh(promptText, customName, false);
         if (!customMesh) {
-            if (isAdmin) {
-                aiResponse = `❌ <strong>Seda asja ei ole olemas!</strong><br>AI ei tundnud eset või sõna <em>"${promptText}"</em> ära ja ei oska seda luua.<br>💡 <em>Vihje: Proovi kirjeldada tuntud esemeid (nt loomad, autod, lennukid, majad, puud, robotid, toidud) või vali ese vasakult 10 000+ objekti kataloogist!</em>`;
+            let qwenReply: string | null = null;
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
+                const piResp = await fetch('http://192.168.1.219:11434/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    signal: controller.signal,
+                    body: JSON.stringify({
+                        model: 'qwen2.5:0.5b',
+                        prompt: `Oled Playard AI mänguehitaja assistent. Vasta sõbralikult, abivalmilt ja lühidalt eesti keeles: ${promptText}`,
+                        stream: false
+                    })
+                });
+                clearTimeout(timeoutId);
+                if (piResp.ok) {
+                    const piData = await piResp.json();
+                    if (piData && piData.response) {
+                        qwenReply = piData.response.trim();
+                    }
+                }
+            } catch (e) {}
+
+            if (qwenReply) {
+                aiResponse = qwenReply.replace(/\n/g, '<br>');
             } else {
-                aiResponse = `❌ <strong>Seda asja ei ole olemas! / This item does not exist!</strong><br>AI did not recognize <em>"${promptText}"</em> and cannot build it.<br>💡 <em>Hint: Try asking for known objects (e.g. animals, cars, airplanes, buildings, trees, robots, food) or pick an object from the 10,000+ catalog on the left!</em>`;
+                if (isAdmin) {
+                    aiResponse = `❌ <strong>Seda asja ei ole olemas!</strong><br>AI ei tundnud eset või sõna <em>"${promptText}"</em> ära ja ei oska seda luua.<br>💡 <em>Vihje: Proovi kirjeldada tuntud esemeid (nt loomad, autod, lennukid, majad, puud, robotid, toidud) või vali ese vasakult 10 000+ objekti kataloogist!</em>`;
+                } else {
+                    aiResponse = `❌ <strong>Seda asja ei ole olemas! / This item does not exist!</strong><br>AI did not recognize <em>"${promptText}"</em> and cannot build it.<br>💡 <em>Hint: Try asking for known objects (e.g. animals, cars, airplanes, buildings, trees, robots, food) or pick an object from the 10,000+ catalog on the left!</em>`;
+                }
             }
         } else {
             customMesh.position.set(0, 0, -4.5);

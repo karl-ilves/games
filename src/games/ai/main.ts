@@ -171,11 +171,9 @@ class PlayardAiApp {
         }
 
         if (parsed.intent === 'GENERAL_KNOWLEDGE') {
+            if (parsed.parameters?.answer) return this.state.addAiMessage(parsed.parameters.answer);
             const nRes = await GeminiCloudEngine.getInstance().queryNeural(parsed.rawText, this.state.getActiveScene());
-            if (nRes.success && nRes.modelUsed.includes('qwen')) {
-                return this.state.addAiMessage(nRes.text);
-            }
-            return this.state.addAiMessage(parsed.parameters?.answer || 'Siin on vastus sinu küsimusele.');
+            return this.state.addAiMessage(nRes.success && nRes.modelUsed.includes('qwen') ? nRes.text : 'Siin on vastus sinu küsimusele.');
         }
 
         // 7-etapiline arenduskonveier (IDEA -> PLAAN -> LOOMINE -> KOOD -> TESTIMINE -> PARANDAMINE -> AVALDAMINE)
