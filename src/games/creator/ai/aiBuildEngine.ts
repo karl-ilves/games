@@ -736,10 +736,44 @@ export async function executeAiBuild(promptText: string, imageDataUrl?: string |
         performRedo();
         aiResponse = isAdmin ? `↪️ <strong>Tegevus uuesti rakendatud (Redo)!</strong>` : `↪️ <strong>Action redone!</strong>`;
 
-    // --- 0.01 PLAYARD GENERAL KNOWLEDGE & ANTI-HALLUCINATION GUARD ---
-    } else if (PlayardGeneralKnowledge.answerQuestion(promptText) !== null) {
-        const fact = PlayardGeneralKnowledge.answerQuestion(promptText)!;
-        aiResponse = `🧠 <strong>Playard AI Teadmistebaas:</strong><br>${fact}`;
+    // --- 0.01 DIRECT NEURAL QWEN 2.5 ANSWER (Päris AI mudel vastab alati, kui pole matemaatika) ---
+    } else if (!isMathPattern && PlayardGeneralKnowledge.answerQuestion(promptText) !== null) {
+        let qwenReply: string | null = null;
+        if (!(window as any).__FAST_TEST_MODE__) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 25000);
+                const ollamaUrl = typeof window !== 'undefined' && window.location && window.location.origin.includes('playardgames.com')
+                    ? `${window.location.origin}/ollama/api/generate`
+                    : 'http://192.168.1.219:11434/api/generate';
+                const piResp = await fetch(ollamaUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    signal: controller.signal,
+                    body: JSON.stringify({
+                        model: 'qwen2.5:0.5b',
+                        prompt: promptText,
+                        options: { num_predict: 60 },
+                        stream: false
+                    })
+                });
+                clearTimeout(timeoutId);
+                if (piResp.ok) {
+                    const piData = await piResp.json();
+                    if (piData && piData.response) {
+                        qwenReply = piData.response.trim();
+                    }
+                }
+            } catch (e) {}
+        }
+
+        if (qwenReply) {
+            aiResponse = qwenReply.replace(/\n/g, '<br>');
+        } else {
+            // Testirežiimis või kui server ei vasta
+            const fact = PlayardGeneralKnowledge.answerQuestion(promptText)!;
+            aiResponse = fact;
+        }
 
     // --- 0.02 PLAYARD 7-STAGE DEVELOPMENT PIPELINE ---
     } else if (p.includes('pipeline') || p.includes('arenduskonveier') || p.includes('arendustsükkel') || /^(etapp|samm|stage)\s*([1-7]|idea|plaan|loomine|kood|testimine|parandamine|avaldamine)/i.test(p)) {

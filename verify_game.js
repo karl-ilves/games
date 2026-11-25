@@ -3009,6 +3009,7 @@ await (async () => {
 
             // Initialize VIP tier during comprehensive prompt battery so it does not exhaust Free daily 20 quota early
             await page.evaluate(() => {
+                window.__FAST_TEST_MODE__ = true;
                 const cs = window.creatorStudio;
                 if (cs && cs.aiTierService) {
                     cs.aiTierService.setTier('VIP');
