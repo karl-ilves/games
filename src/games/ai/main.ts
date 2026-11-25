@@ -170,36 +170,36 @@ class PlayardAiApp {
             return;
         }
 
-        if (parsed.intent === 'GENERAL_KNOWLEDGE') return this.state.addAiMessage(parsed.parameters?.answer || 'Siin on vastus sinu küsimusele.');
+        if (parsed.intent === 'GENERAL_KNOWLEDGE') {
+            const nRes = await GeminiCloudEngine.getInstance().queryNeural(parsed.rawText, this.state.getActiveScene());
+            if (nRes.success && nRes.modelUsed.includes('qwen')) {
+                return this.state.addAiMessage(nRes.text);
+            }
+            return this.state.addAiMessage(parsed.parameters?.answer || 'Siin on vastus sinu küsimusele.');
+        }
 
         // 7-etapiline arenduskonveier (IDEA -> PLAAN -> LOOMINE -> KOOD -> TESTIMINE -> PARANDAMINE -> AVALDAMINE)
         if (parsed.intent === 'PIPELINE_STEP' && parsed.parameters?.guidance) {
             const g = parsed.parameters.guidance;
-            const msg = `🚀 **Playard Arenduskonveier: Etapp ${g.stageNumber} / 7 – ${g.title} (${parsed.parameters?.stage})**\n\n${g.description}\n\n📋 **Tegevuskava & Kontrollnimekiri:**\n${g.checklist.map((c: string) => `• ${c}`).join('\n')}\n\n💡 **Soovitus:** ${g.actionPrompt}`;
-            return this.state.addAiMessage(msg, g.codeTemplate ? { codeSnippet: g.codeTemplate } : undefined);
+            return this.state.addAiMessage(`🚀 **Playard Arenduskonveier: Etapp ${g.stageNumber} / 7 – ${g.title} (${parsed.parameters?.stage})**\n\n${g.description}\n\n📋 **Tegevuskava & Kontrollnimekiri:**\n${g.checklist.map((c: string) => `• ${c}`).join('\n')}\n\n💡 **Soovitus:** ${g.actionPrompt}`, g.codeTemplate ? { codeSnippet: g.codeTemplate } : undefined);
         }
 
         // Koodi parandamine, silumine ja optimeerimine
         if (parsed.intent === 'CODE_ASSIST') {
             const repair = AiCodeAndSystemEngine.repairCode(parsed.rawText);
-            const bugs = repair.detectedBugs.map(b => `• ⚠️ ${b}`).join('\n');
-            const msg = `🛠️ **Playard AI Koodimootor:**\n\n${repair.explanation}\n\n**Tuvastatud parandused:**\n${bugs}`;
-            this.state.addAiMessage(msg, { codeSnippet: repair.fixedCode });
+            this.state.addAiMessage(`🛠️ **Playard AI Koodimootor:**\n\n${repair.explanation}\n\n**Tuvastatud parandused:**\n${repair.detectedBugs.map(b => `• ⚠️ ${b}`).join('\n')}`, { codeSnippet: repair.fixedCode });
             return;
         }
 
         // UI komponentide genereerimine (Shop, Inventory, HUD jne)
         if (parsed.intent === 'UI_GEN') {
             const comp = AiCodeAndSystemEngine.generateUIComponent(parsed.parameters?.uiType || 'hud');
-            const msg = `🎨 **Playard UI Generaator:** Lõin valmis puhta kasutajaliidese komponendi (${parsed.parameters?.uiType || 'hud'}).`;
-            this.state.addAiMessage(msg, { codeSnippet: `${comp.html}\n\n<script>\n${comp.script}\n</script>` });
+            this.state.addAiMessage(`🎨 **Playard UI Generaator:** Lõin valmis puhta kasutajaliidese komponendi (${parsed.parameters?.uiType || 'hud'}).`, { codeSnippet: `${comp.html}\n\n<script>\n${comp.script}\n</script>` });
             return;
         }
 
         // Loomuliku keele tehniline kompileerimine (9 alamsüsteemi)
-        if (parsed.intent === 'TECHNICAL_COMPILATION' && parsed.parameters?.plan) {
-            return this.state.addAiMessage(PlayardNaturalLanguageCompiler.formatPlan(parsed.parameters.plan));
-        }
+        if (parsed.intent === 'TECHNICAL_COMPILATION' && parsed.parameters?.plan) return this.state.addAiMessage(PlayardNaturalLanguageCompiler.formatPlan(parsed.parameters.plan));
 
         // 10/10 AI: Majandus, jõudlus, nõuanded ja piltide loomine
         if (parsed.intent === 'ECONOMY_BALANCE') return this.state.addAiMessage(PlayardEconomyAndBalanceEngine.formatReport(parsed.parameters?.balance));
