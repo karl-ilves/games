@@ -586,6 +586,37 @@ export async function executeAiBuild(promptText: string, imageDataUrl?: string |
     aiTierService.recordRequest();
     updateAiTierDisplay();
 
+    // 🤖 3 Täppi (...) Mõtlemise indikaator enne Qwen 2.5 vastust
+    let typingBubble: HTMLElement | null = null;
+    if (chatLog) {
+        typingBubble = document.createElement('div');
+        typingBubble.id = 'creator-ai-typing-indicator';
+        typingBubble.style.cssText = 'background: #1e293b; border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 12px; padding: 10px 14px; color: #e2e8f0; align-self: flex-start; max-width: 85%; display: inline-flex; flex-direction: column; gap: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); animation: fadeIn 0.2s ease;';
+        typingBubble.innerHTML = `
+            <div style="font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 6px;">
+                <span>🤖 Qwen 2.5 (Playard AI 1.1)</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; padding: 4px 0;">
+                <span class="ai-dot-pulse" style="width: 7px; height: 7px; background: #38bdf8; border-radius: 50%; display: inline-block; animation: aiDotBounce 1.4s infinite ease-in-out both;"></span>
+                <span class="ai-dot-pulse" style="width: 7px; height: 7px; background: #38bdf8; border-radius: 50%; display: inline-block; animation: aiDotBounce 1.4s infinite ease-in-out both; animation-delay: 0.2s;"></span>
+                <span class="ai-dot-pulse" style="width: 7px; height: 7px; background: #38bdf8; border-radius: 50%; display: inline-block; animation: aiDotBounce 1.4s infinite ease-in-out both; animation-delay: 0.4s;"></span>
+            </div>
+            <style>
+                @keyframes aiDotBounce {
+                    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+                    40% { transform: scale(1.15); opacity: 1; }
+                }
+            </style>
+        `;
+        chatLog.appendChild(typingBubble);
+        chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    // Mõtlemispaus ja Qwen 2.5 genereerimine
+    if (!(window as any).__FAST_TEST_MODE__) {
+        await new Promise(r => setTimeout(r, 600));
+    }
+
     const p = promptText.toLowerCase().trim();
     let generatedObjectsCount = 0;
     let aiResponse = '';
@@ -705,10 +736,37 @@ export async function executeAiBuild(promptText: string, imageDataUrl?: string |
         performRedo();
         aiResponse = isAdmin ? `↪️ <strong>Tegevus uuesti rakendatud (Redo)!</strong>` : `↪️ <strong>Action redone!</strong>`;
 
-    // --- 0.01 PLAYARD GENERAL KNOWLEDGE & ANTI-HALLUCINATION GUARD ---
+    // --- 0.01 PLAYARD GENERAL KNOWLEDGE & ANTI-HALLUCINATION GUARD (Qwen 2.5 Priority) ---
     } else if (PlayardGeneralKnowledge.answerQuestion(promptText) !== null) {
-        const fact = PlayardGeneralKnowledge.answerQuestion(promptText)!;
-        aiResponse = `🧠 <strong>Playard AI Teadmistebaas:</strong><br>${fact}`;
+        let qwenReply: string | null = null;
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 6000);
+            const piResp = await fetch('http://192.168.1.219:11434/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                signal: controller.signal,
+                body: JSON.stringify({
+                    model: 'qwen2.5:0.5b',
+                    prompt: `Oled Playard AI. Vasta lühidalt ja asjalikult eesti keeles: ${promptText}`,
+                    stream: false
+                })
+            });
+            clearTimeout(timeoutId);
+            if (piResp.ok) {
+                const piData = await piResp.json();
+                if (piData && piData.response) {
+                    qwenReply = piData.response.trim();
+                }
+            }
+        } catch (e) {}
+
+        if (qwenReply) {
+            aiResponse = `🤖 <strong>Qwen 2.5 (Raspberry Pi 3):</strong><br>${qwenReply}`;
+        } else {
+            const fact = PlayardGeneralKnowledge.answerQuestion(promptText)!;
+            aiResponse = `🧠 <strong>Playard AI Teadmistebaas:</strong><br>${fact}`;
+        }
 
     // --- 0.02 PLAYARD 7-STAGE DEVELOPMENT PIPELINE ---
     } else if (p.includes('pipeline') || p.includes('arenduskonveier') || p.includes('arendustsükkel') || /^(etapp|samm|stage)\s*([1-7]|idea|plaan|loomine|kood|testimine|parandamine|avaldamine)/i.test(p)) {
@@ -2996,10 +3054,13 @@ export async function executeAiBuild(promptText: string, imageDataUrl?: string |
 
     // Append AI Response to chat
     if (chatLog) {
+        if (typingBubble && typingBubble.parentNode) {
+            typingBubble.parentNode.removeChild(typingBubble);
+        }
         const botMsg = document.createElement('div');
         const borderCol = '#00f2fe';
-        const botTitle = '🤖 <strong>Playard AI:</strong>';
-        botMsg.style.cssText = `background: rgba(255,255,255,0.08); border-left: 3px solid ${borderCol}; border-radius: 8px; padding: 10px 12px; color: #e2e8f0; line-height: 1.4;`;
+        const botTitle = '🤖 <strong>Playard AI (Qwen 2.5):</strong>';
+        botMsg.style.cssText = `background: rgba(255,255,255,0.08); border-left: 3px solid ${borderCol}; border-radius: 8px; padding: 10px 12px; color: #e2e8f0; line-height: 1.4; animation: fadeIn 0.2s ease;`;
         botMsg.innerHTML = `${botTitle}<br>${aiResponse}`;
         chatLog.appendChild(botMsg);
         chatLog.scrollTop = chatLog.scrollHeight;
