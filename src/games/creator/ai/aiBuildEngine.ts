@@ -40,7 +40,7 @@ import { createWholeMapOcean, createPartMapOcean, removeSea, setDayNightMode } f
 import { applyScriptPreset, executeObjectScript } from '../systems/scriptRunner';
 import { CATALOG_DATABASE } from '../catalog/creatorCatalog';
 import { aiTierService, AI_TIER_CONFIGS } from '../../../shared/aiTierService';
-import { PlayardGeneralKnowledge, PLAYARD_PIPELINE_STAGES, AiCodeAndSystemEngine, PLAYARD_GENRES_CATALOG } from '../../../shared/playardAiKnowledge';
+import { PlayardGeneralKnowledge, PlayardWikipediaService, PLAYARD_PIPELINE_STAGES, AiCodeAndSystemEngine, PLAYARD_GENRES_CATALOG } from '../../../shared/playardAiKnowledge';
 import { PlayardImageGenerationEngine } from '../../../shared/imageGenerationEngine';
 import { getCurrentUserProfile, isUserAdminEmail } from '../../../auth';
 import { yardService } from '../../../shared/yardService';
@@ -736,24 +736,40 @@ export async function executeAiBuild(promptText: string, imageDataUrl?: string |
         performRedo();
         aiResponse = isAdmin ? `↪️ <strong>Tegevus uuesti rakendatud (Redo)!</strong>` : `↪️ <strong>Action redone!</strong>`;
 
-    // --- 0.01 DIRECT NEURAL QWEN 2.5 ANSWER (Päris AI mudel vastab alati, kui pole matemaatika) ---
+    // --- 0.01 DIRECT NEURAL QWEN 2.5 ANSWER (Päris AI mudel vastab 100% netiotsinguga ja igas keeles) ---
     } else if (!isMathPattern && PlayardGeneralKnowledge.answerQuestion(promptText) !== null) {
         let qwenReply: string | null = null;
         if (!(window as any).__FAST_TEST_MODE__) {
             try {
+                // 1. Reaalajas neti/Vikipeedia otsing taustainfoks
+                let liveWebContext = '';
+                try {
+                    const searchEntity = PlayardWikipediaService.extractSearchEntity(promptText);
+                    if (searchEntity && searchEntity.length >= 2) {
+                        const wikiSummary = await PlayardWikipediaService.fetchSummary(searchEntity);
+                        if (wikiSummary && wikiSummary.extract) {
+                            liveWebContext = `\n[Info internetist (${wikiSummary.title})]: ${wikiSummary.extract.slice(0, 300)}`;
+                        }
+                    }
+                } catch (e) {}
+
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 25000);
                 const ollamaUrl = typeof window !== 'undefined' && window.location && window.location.origin.includes('playardgames.com')
                     ? `${window.location.origin}/ollama/api/generate`
                     : 'http://192.168.1.219:11434/api/generate';
+                const finalPrompt = liveWebContext
+                    ? `Oled Playard Game AI 1.1. Kasuta seda reaalajas interneti infot: "${liveWebContext}". Vasta kasutaja küsimusele täpselt, faktitruult ja samas keeles nagu kasutaja küsis:\nKüsimus: ${promptText}`
+                    : `Oled Playard Game AI 1.1. Vasta kasutaja küsimusele faktitruult, targalt ja samas keeles nagu kasutaja küsis: ${promptText}`;
+
                 const piResp = await fetch(ollamaUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     signal: controller.signal,
                     body: JSON.stringify({
                         model: 'qwen2.5:0.5b',
-                        prompt: promptText,
-                        options: { num_predict: 60 },
+                        prompt: finalPrompt,
+                        options: { num_predict: 80 },
                         stream: false
                     })
                 });
@@ -3033,21 +3049,36 @@ export async function executeAiBuild(promptText: string, imageDataUrl?: string |
             } else {
                 let aiGeneratedReply: string | null = null;
                 try {
+                    let liveWebContext = '';
+                    try {
+                        const searchEntity = PlayardWikipediaService.extractSearchEntity(promptText);
+                        if (searchEntity && searchEntity.length >= 2) {
+                            const wikiSummary = await PlayardWikipediaService.fetchSummary(searchEntity);
+                            if (wikiSummary && wikiSummary.extract) {
+                                liveWebContext = `\n[Info internetist (${wikiSummary.title})]: ${wikiSummary.extract.slice(0, 300)}`;
+                            }
+                        }
+                    } catch (e) {}
+
                     const controller = new AbortController();
                     // Oota kuni vastus valmis tehakse (kuni 35 sekundit)
                     const timeoutId = setTimeout(() => controller.abort(), 35000);
                     const ollamaUrl = typeof window !== 'undefined' && window.location && window.location.origin.includes('playardgames.com')
                         ? `${window.location.origin}/ollama/api/generate`
                         : 'http://192.168.1.219:11434/api/generate';
+                    const finalPrompt = liveWebContext
+                        ? `Oled Playard Game AI 1.1 mänguehitaja assistent. Kasuta reaalajas interneti infot: "${liveWebContext}". Vasta abivalmilt ja samas keeles nagu kasutaja küsis:\nKüsimus: ${promptText}`
+                        : `Oled Playard Game AI 1.1 mänguehitaja assistent. Vasta abivalmilt, targalt ja samas keeles nagu kasutaja küsis:\nKüsimus: ${promptText}`;
+
                     const piResp = await fetch(ollamaUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         signal: controller.signal,
                         body: JSON.stringify({
                             model: 'qwen2.5:0.5b',
-                            prompt: `Oled Playard Game AI 1.1 mänguehitaja assistent. Vasta sõbralikult, abivalmilt ja lühidalt: ${promptText}`,
+                            prompt: finalPrompt,
                             options: {
-                                num_predict: 50
+                                num_predict: 80
                             },
                             stream: false
                         })
