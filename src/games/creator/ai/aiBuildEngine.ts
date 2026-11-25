@@ -593,13 +593,15 @@ export async function executeAiBuild(promptText: string, imageDataUrl?: string |
         typingBubble.id = 'creator-ai-typing-indicator';
         typingBubble.style.cssText = 'background: #1e293b; border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 12px; padding: 10px 14px; color: #e2e8f0; align-self: flex-start; max-width: 85%; display: inline-flex; flex-direction: column; gap: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); animation: fadeIn 0.2s ease;';
         typingBubble.innerHTML = `
-            <div style="font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 6px;">
-                <span>🤖 Playard Game AI 1.1</span>
+            <div style="font-size: 11px; color: #38bdf8; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <span style="font-weight: 700;">🤖 Playard Game AI 1.1</span>
+                <span style="font-size: 10px; color: #94a3b8; background: rgba(56, 189, 248, 0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.2);">⚡ Reaalajas netiotsing & 3D mootor</span>
             </div>
             <div style="display: flex; align-items: center; gap: 6px; padding: 4px 0;">
                 <span class="ai-dot-pulse" style="width: 7px; height: 7px; background: #38bdf8; border-radius: 50%; display: inline-block; animation: aiDotBounce 1.4s infinite ease-in-out both;"></span>
-                <span class="ai-dot-pulse" style="width: 7px; height: 7px; background: #38bdf8; border-radius: 50%; display: inline-block; animation: aiDotBounce 1.4s infinite ease-in-out both; animation-delay: 0.2s;"></span>
-                <span class="ai-dot-pulse" style="width: 7px; height: 7px; background: #38bdf8; border-radius: 50%; display: inline-block; animation: aiDotBounce 1.4s infinite ease-in-out both; animation-delay: 0.4s;"></span>
+                <span class="ai-dot-pulse" style="width: 7px; height: 7px; background: #00f2fe; border-radius: 50%; display: inline-block; animation: aiDotBounce 1.4s infinite ease-in-out both; animation-delay: 0.2s;"></span>
+                <span class="ai-dot-pulse" style="width: 7px; height: 7px; background: #4facfe; border-radius: 50%; display: inline-block; animation: aiDotBounce 1.4s infinite ease-in-out both; animation-delay: 0.4s;"></span>
+                <span style="font-size: 11px; color: #cbd5e1; margin-left: 4px;">Uurin ja analüüsin...</span>
             </div>
             <style>
                 @keyframes aiDotBounce {
