@@ -6,6 +6,8 @@
  *    Vilgub roheline tuli (ACT) iga 5 sek tagant 0,5 sek.
  * 2. Viga (error):
  *    Vilkuv punane tuli (PWR).
+ * 3. Ülekuumenemise hoiatus (temp >= 70°C):
+ *    Punane tuli (PWR) põleb PIDEVALT sees seni, kuni temperatuur langeb alla 70°C.
  */
 
 import { exec } from 'node:child_process';
