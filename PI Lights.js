@@ -2,11 +2,12 @@
  * PI Lights.js
  * 
  * Juhib Raspberry Pi 3 (192.168.1.219) LED-tulesid vastavalt määratud mustrile:
- * - Kui agent/server teeb tööd:
- *   Roheline tuli (ACT): I 0,2s vahet I 0,2s vahet I 1s vahe
- *   Punane tuli (PWR): I 0,2s vahet I 0,2s vahet I 1s vahe
- *   ja kordub loopis seni, kuni töö kestab.
- * - Kui töö lõppeb: lülitub tagasi ooterežiimile (waiting).
+ * - Kui aktiivne (töötab - 'busy'):
+ *   Vilgub roheline tuli (ACT) iga 5 sek tagant 0,5 sek.
+ * - Kui viga tekib ('error'):
+ *   Vilkuv punane tuli (PWR).
+ * - Kui töö lõppeb ('waiting'):
+ *   Lülitub tagasi ooterežiimile (punane põleb rahulikult, roheline väljas).
  */
 
 import { exec } from 'node:child_process';
