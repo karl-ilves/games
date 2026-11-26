@@ -761,8 +761,8 @@ export async function executeAiBuild(promptText: string, imageDataUrl?: string |
                     ? `${window.location.origin}/ollama/api/generate`
                     : 'http://192.168.1.219:11434/api/generate';
                 const finalPrompt = liveWebContext
-                    ? `Oled Playard Game AI 1.1. Kasuta seda reaalajas interneti infot: "${liveWebContext}". Vasta kasutaja küsimusele täpselt, faktitruult ja samas keeles nagu kasutaja küsis:\nKüsimus: ${promptText}`
-                    : `Oled Playard Game AI 1.1. Vasta kasutaja küsimusele faktitruult, targalt ja samas keeles nagu kasutaja küsis: ${promptText}`;
+                    ? `[Faktid]: ${liveWebContext}\nKüsimus: ${promptText}\nVasta lühidalt, selgelt ja puhtas eesti keeles:`
+                    : `Küsimus: ${promptText}\nVasta lühidalt, selgelt ja puhtas eesti keeles:`;
 
                 const piResp = await fetch(ollamaUrl, {
                     method: 'POST',
@@ -771,7 +771,11 @@ export async function executeAiBuild(promptText: string, imageDataUrl?: string |
                     body: JSON.stringify({
                         model: 'qwen2.5:0.5b',
                         prompt: finalPrompt,
-                        options: { num_predict: 80 },
+                        options: {
+                            num_predict: 80,
+                            temperature: 0.3,
+                            top_p: 0.85
+                        },
                         stream: false
                     })
                 });
@@ -3069,8 +3073,8 @@ export async function executeAiBuild(promptText: string, imageDataUrl?: string |
                         ? `${window.location.origin}/ollama/api/generate`
                         : 'http://192.168.1.219:11434/api/generate';
                     const finalPrompt = liveWebContext
-                        ? `Oled Playard Game AI 1.1 mänguehitaja assistent. Kasuta reaalajas interneti infot: "${liveWebContext}". Vasta abivalmilt ja samas keeles nagu kasutaja küsis:\nKüsimus: ${promptText}`
-                        : `Oled Playard Game AI 1.1 mänguehitaja assistent. Vasta abivalmilt, targalt ja samas keeles nagu kasutaja küsis:\nKüsimus: ${promptText}`;
+                        ? `[Faktid]: ${liveWebContext}\nKüsimus: ${promptText}\nVasta abivalmilt ja puhtas eesti keeles:`
+                        : `Küsimus: ${promptText}\nVasta abivalmilt, lühidalt ja puhtas eesti keeles:`;
 
                     const piResp = await fetch(ollamaUrl, {
                         method: 'POST',
@@ -3080,7 +3084,9 @@ export async function executeAiBuild(promptText: string, imageDataUrl?: string |
                             model: 'qwen2.5:0.5b',
                             prompt: finalPrompt,
                             options: {
-                                num_predict: 80
+                                num_predict: 80,
+                                temperature: 0.3,
+                                top_p: 0.85
                             },
                             stream: false
                         })
