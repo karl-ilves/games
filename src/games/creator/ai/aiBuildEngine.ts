@@ -769,7 +769,7 @@ export async function executeAiBuild(promptText: string, imageDataUrl?: string |
                     headers: { 'Content-Type': 'application/json' },
                     signal: controller.signal,
                     body: JSON.stringify({
-                        model: 'qwen2.5:0.5b',
+                        model: 'playard-game-ai:latest',
                         prompt: finalPrompt,
                         options: {
                             num_predict: 80,
@@ -3081,7 +3081,7 @@ export async function executeAiBuild(promptText: string, imageDataUrl?: string |
                         headers: { 'Content-Type': 'application/json' },
                         signal: controller.signal,
                         body: JSON.stringify({
-                            model: 'qwen2.5:0.5b',
+                            model: 'playard-game-ai:latest',
                             prompt: finalPrompt,
                             options: {
                                 num_predict: 80,
