@@ -75,14 +75,13 @@ let serverSessionTimer: any = null;
 export function isServersUnlocked(): boolean {
     if (typeof window === 'undefined') return false;
     try {
-        const expStr = sessionStorage.getItem(SERVERS_AUTH_KEY) || localStorage.getItem(SERVERS_AUTH_KEY);
+        const expStr = sessionStorage.getItem(SERVERS_AUTH_KEY);
         if (!expStr) return false;
         const exp = parseInt(expStr, 10);
         if (Date.now() < exp) {
             return true;
         } else {
             sessionStorage.removeItem(SERVERS_AUTH_KEY);
-            localStorage.removeItem(SERVERS_AUTH_KEY);
             return false;
         }
     } catch {
@@ -95,7 +94,6 @@ export function unlockServersSession(): void {
     const expiresAt = Date.now() + SERVERS_SESSION_DURATION_MS;
     try {
         sessionStorage.setItem(SERVERS_AUTH_KEY, String(expiresAt));
-        localStorage.setItem(SERVERS_AUTH_KEY, String(expiresAt));
     } catch {}
 }
 
@@ -103,7 +101,6 @@ export function lockServersSession(): void {
     if (typeof window === 'undefined') return;
     try {
         sessionStorage.removeItem(SERVERS_AUTH_KEY);
-        localStorage.removeItem(SERVERS_AUTH_KEY);
     } catch {}
 }
 
@@ -871,7 +868,7 @@ function renderPAdminDashboard(
     const isUnlocked = isServersUnlocked();
     const remainingSessionMs = (() => {
         try {
-            const exp = parseInt(sessionStorage.getItem(SERVERS_AUTH_KEY) || localStorage.getItem(SERVERS_AUTH_KEY) || '0', 10);
+            const exp = parseInt(sessionStorage.getItem(SERVERS_AUTH_KEY) || '0', 10);
             return Math.max(0, exp - Date.now());
         } catch { return 0; }
     })();
@@ -1112,40 +1109,66 @@ function renderPAdminDashboard(
                             <span style="font-size: 0.75rem; font-weight: 600; opacity: 0.9;">Nginx • Tunnel • Deploy</span>
                         </div>
 
-                        <!-- Tuled kõrval (Valgusfoor: punane ja roheline) -->
+                        <!-- Tuled kõrval (Valgusfoor: näitab serveri olekut) -->
                         <div id="padmin-server-leds" style="
                             display: flex;
                             flex-direction: column;
-                            gap: 14px;
-                            padding: 12px 10px;
+                            align-items: center;
+                            gap: 10px;
+                            padding: 14px 12px;
                             background: #0f172a;
                             border: 2px solid #334155;
-                            border-radius: 16px;
-                            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+                            border-radius: 18px;
+                            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
                         ">
                             <!-- Punane tuli -->
-                            <div id="padmin-led-red" title="${currentServerStatus === 'offline' ? 'Punane: Ei tööta' : (currentServerStatus === 'waiting' ? 'Punane + Roheline: Ootab ülesannet' : 'Punane: Väljas')}" style="
-                                width: 18px;
-                                height: 18px;
-                                border-radius: 50%;
-                                background: ${currentServerStatus === 'offline' || currentServerStatus === 'waiting' ? '#ef4444' : '#450a0a'};
-                                box-shadow: ${currentServerStatus === 'offline' || currentServerStatus === 'waiting' ? '0 0 16px #ef4444, 0 0 6px #dc2626' : 'none'};
-                                border: 2px solid ${currentServerStatus === 'offline' || currentServerStatus === 'waiting' ? '#b91c1c' : '#1f2937'};
-                                opacity: ${currentServerStatus === 'offline' || currentServerStatus === 'waiting' ? '1' : '0.25'};
-                                transition: all 0.3s ease;
-                            "></div>
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                                <div id="padmin-led-red" title="${currentServerStatus === 'offline' ? 'Punane: Ei tööta' : (currentServerStatus === 'waiting' ? 'Punane: Ootab ülesannet' : 'Punane: Väljas')}" style="
+                                    width: 22px;
+                                    height: 22px;
+                                    border-radius: 50%;
+                                    background: ${currentServerStatus === 'offline' || currentServerStatus === 'waiting' ? '#ef4444' : '#450a0a'};
+                                    box-shadow: ${currentServerStatus === 'offline' || currentServerStatus === 'waiting' ? '0 0 16px #ef4444, 0 0 6px #dc2626' : 'none'};
+                                    border: 2px solid ${currentServerStatus === 'offline' || currentServerStatus === 'waiting' ? '#b91c1c' : '#1f2937'};
+                                    opacity: ${currentServerStatus === 'offline' || currentServerStatus === 'waiting' ? '1' : '0.25'};
+                                    transition: all 0.3s ease;
+                                "></div>
+                                <span style="font-size: 0.65rem; font-weight: 800; color: ${currentServerStatus === 'offline' ? '#f87171' : (currentServerStatus === 'waiting' ? '#fca5a5' : '#64748b')};">PUNANE</span>
+                            </div>
 
                             <!-- Roheline tuli -->
-                            <div id="padmin-led-green" title="${currentServerStatus === 'busy' ? 'Roheline: Teeb midagi' : (currentServerStatus === 'waiting' ? 'Punane + Roheline: Ootab ülesannet' : 'Roheline: Väljas')}" style="
-                                width: 18px;
-                                height: 18px;
-                                border-radius: 50%;
-                                background: ${currentServerStatus === 'busy' || currentServerStatus === 'waiting' ? '#22c55e' : '#052e16'};
-                                box-shadow: ${currentServerStatus === 'busy' || currentServerStatus === 'waiting' ? '0 0 16px #22c55e, 0 0 6px #16a34a' : 'none'};
-                                border: 2px solid ${currentServerStatus === 'busy' || currentServerStatus === 'waiting' ? '#15803d' : '#1f2937'};
-                                opacity: ${currentServerStatus === 'busy' || currentServerStatus === 'waiting' ? '1' : '0.25'};
-                                transition: all 0.3s ease;
-                            "></div>
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                                <div id="padmin-led-green" title="${currentServerStatus === 'busy' ? 'Roheline: Teeb midagi' : (currentServerStatus === 'waiting' ? 'Roheline: Ootab ülesannet' : 'Roheline: Väljas')}" style="
+                                    width: 22px;
+                                    height: 22px;
+                                    border-radius: 50%;
+                                    background: ${currentServerStatus === 'busy' || currentServerStatus === 'waiting' ? '#22c55e' : '#052e16'};
+                                    box-shadow: ${currentServerStatus === 'busy' || currentServerStatus === 'waiting' ? '0 0 16px #22c55e, 0 0 6px #16a34a' : 'none'};
+                                    border: 2px solid ${currentServerStatus === 'busy' || currentServerStatus === 'waiting' ? '#15803d' : '#1f2937'};
+                                    opacity: ${currentServerStatus === 'busy' || currentServerStatus === 'waiting' ? '1' : '0.25'};
+                                    transition: all 0.3s ease;
+                                "></div>
+                                <span style="font-size: 0.65rem; font-weight: 800; color: ${currentServerStatus === 'busy' ? '#4ade80' : (currentServerStatus === 'waiting' ? '#86efac' : '#64748b')};">ROHELINE</span>
+                            </div>
+
+                            <!-- Foor staatus otse foori all -->
+                            <div style="
+                                margin-top: 4px;
+                                font-size: 0.68rem;
+                                font-weight: 900;
+                                text-align: center;
+                                padding: 2px 6px;
+                                border-radius: 6px;
+                                white-space: nowrap;
+                                ${currentServerStatus === 'offline'
+                                    ? 'background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4);'
+                                    : currentServerStatus === 'waiting'
+                                    ? 'background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4);'
+                                    : 'background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.4);'
+                                }
+                            ">
+                                ${currentServerStatus === 'offline' ? 'Ei tööta' : (currentServerStatus === 'waiting' ? 'Ootab' : 'Töötab')}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1186,79 +1209,68 @@ function renderPAdminDashboard(
                             <span style="font-size: 0.75rem; font-weight: 600; opacity: 0.9;">SSH Mesh • Tiimi partner</span>
                         </div>
 
-                        <!-- Tuled kõrval Server 2 -->
+                        <!-- Tuled kõrval Server 2 (Valgusfoor) -->
                         <div style="
                             display: flex;
                             flex-direction: column;
-                            gap: 14px;
-                            padding: 12px 10px;
+                            align-items: center;
+                            gap: 10px;
+                            padding: 14px 12px;
                             background: #0f172a;
                             border: 2px solid #334155;
-                            border-radius: 16px;
-                            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+                            border-radius: 18px;
+                            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
                         ">
                             <!-- Punane tuli -->
-                            <div style="
-                                width: 18px;
-                                height: 18px;
-                                border-radius: 50%;
-                                background: ${currentServerStatus === 'offline' || currentServerStatus === 'waiting' ? '#ef4444' : '#450a0a'};
-                                box-shadow: ${currentServerStatus === 'offline' || currentServerStatus === 'waiting' ? '0 0 16px #ef4444, 0 0 6px #dc2626' : 'none'};
-                                border: 2px solid ${currentServerStatus === 'offline' || currentServerStatus === 'waiting' ? '#b91c1c' : '#1f2937'};
-                                opacity: ${currentServerStatus === 'offline' || currentServerStatus === 'waiting' ? '1' : '0.25'};
-                                transition: all 0.3s ease;
-                            "></div>
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                                <div style="
+                                    width: 22px;
+                                    height: 22px;
+                                    border-radius: 50%;
+                                    background: ${currentServerStatus === 'offline' || currentServerStatus === 'waiting' ? '#ef4444' : '#450a0a'};
+                                    box-shadow: ${currentServerStatus === 'offline' || currentServerStatus === 'waiting' ? '0 0 16px #ef4444, 0 0 6px #dc2626' : 'none'};
+                                    border: 2px solid ${currentServerStatus === 'offline' || currentServerStatus === 'waiting' ? '#b91c1c' : '#1f2937'};
+                                    opacity: ${currentServerStatus === 'offline' || currentServerStatus === 'waiting' ? '1' : '0.25'};
+                                    transition: all 0.3s ease;
+                                "></div>
+                                <span style="font-size: 0.65rem; font-weight: 800; color: ${currentServerStatus === 'offline' ? '#f87171' : (currentServerStatus === 'waiting' ? '#fca5a5' : '#64748b')};">PUNANE</span>
+                            </div>
 
                             <!-- Roheline tuli -->
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                                <div style="
+                                    width: 22px;
+                                    height: 22px;
+                                    border-radius: 50%;
+                                    background: ${currentServerStatus === 'busy' || currentServerStatus === 'waiting' ? '#22c55e' : '#052e16'};
+                                    box-shadow: ${currentServerStatus === 'busy' || currentServerStatus === 'waiting' ? '0 0 16px #22c55e, 0 0 6px #16a34a' : 'none'};
+                                    border: 2px solid ${currentServerStatus === 'busy' || currentServerStatus === 'waiting' ? '#15803d' : '#1f2937'};
+                                    opacity: ${currentServerStatus === 'busy' || currentServerStatus === 'waiting' ? '1' : '0.25'};
+                                    transition: all 0.3s ease;
+                                "></div>
+                                <span style="font-size: 0.65rem; font-weight: 800; color: ${currentServerStatus === 'busy' ? '#4ade80' : (currentServerStatus === 'waiting' ? '#86efac' : '#64748b')};">ROHELINE</span>
+                            </div>
+
+                            <!-- Foor staatus otse foori all -->
                             <div style="
-                                width: 18px;
-                                height: 18px;
-                                border-radius: 50%;
-                                background: ${currentServerStatus === 'busy' || currentServerStatus === 'waiting' ? '#22c55e' : '#052e16'};
-                                box-shadow: ${currentServerStatus === 'busy' || currentServerStatus === 'waiting' ? '0 0 16px #22c55e, 0 0 6px #16a34a' : 'none'};
-                                border: 2px solid ${currentServerStatus === 'busy' || currentServerStatus === 'waiting' ? '#15803d' : '#1f2937'};
-                                opacity: ${currentServerStatus === 'busy' || currentServerStatus === 'waiting' ? '1' : '0.25'};
-                                transition: all 0.3s ease;
-                            "></div>
+                                margin-top: 4px;
+                                font-size: 0.68rem;
+                                font-weight: 900;
+                                text-align: center;
+                                padding: 2px 6px;
+                                border-radius: 6px;
+                                white-space: nowrap;
+                                ${currentServerStatus === 'offline'
+                                    ? 'background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4);'
+                                    : currentServerStatus === 'waiting'
+                                    ? 'background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4);'
+                                    : 'background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.4);'
+                                }
+                            ">
+                                ${currentServerStatus === 'offline' ? 'Ei tööta' : (currentServerStatus === 'waiting' ? 'Ootab' : 'Töötab')}
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- All tekst, mida server teeb -->
-            <div id="padmin-server-status-info" style="
-                margin-top: 8px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 8px;
-                text-align: center;
-            ">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 0.82rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 10px; border-radius: 9999px; ${
-                        currentServerStatus === 'offline'
-                            ? 'background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;'
-                            : currentServerStatus === 'waiting'
-                            ? 'background: #fef3c7; color: #92400e; border: 1px solid #fde68a;'
-                            : 'background: #dcfce7; color: #166534; border: 1px solid #bbf7d0;'
-                    }">
-                        ${
-                            currentServerStatus === 'offline'
-                                ? '🔴 Ei tööta'
-                                : currentServerStatus === 'waiting'
-                                ? '🟡 Ootab ülesannet (Punane + Roheline)'
-                                : '🟢 Teeb midagi (Roheline)'
-                        }
-                    </span>
-                </div>
-                <div id="padmin-server-task-desc" style="
-                    font-size: 0.95rem;
-                    font-weight: 700;
-                    color: #334155;
-                    max-width: 600px;
-                    line-height: 1.5;
-                ">
-                    Server 1 &amp; Server 2 on ühendatud samasse tiimi. ${currentServerTaskDescription}
                 </div>
             </div>
         </div>
@@ -1714,7 +1726,7 @@ function renderPAdminDashboard(
                 const timerTextEl = container.querySelector('#padmin-servers-timer-text');
                 if (timerTextEl) {
                     try {
-                        const exp = parseInt(sessionStorage.getItem(SERVERS_AUTH_KEY) || localStorage.getItem(SERVERS_AUTH_KEY) || '0', 10);
+                        const exp = parseInt(sessionStorage.getItem(SERVERS_AUTH_KEY) || '0', 10);
                         const msLeft = Math.max(0, exp - Date.now());
                         const m = Math.floor(msLeft / 60000);
                         const s = Math.floor((msLeft % 60000) / 1000);
