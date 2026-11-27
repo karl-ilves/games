@@ -60,12 +60,103 @@ export interface ChartDayPoint {
     otherCount: number;
 }
 
+const SERVERS_AUTH_KEY = 'playard_padmin_servers_session_exp';
+const DEFAULT_SERVERS_PASSWORD = '10karlplayard4k';
+const SERVERS_SESSION_DURATION_MS = 2 * 60 * 1000; // 2 minutit
+
 let cachedProfiles: ProfileRecord[] | null = null;
 let cachedGames: GameRecord[] | null = null;
 let activePeriod: FilterPeriod = 'week'; // Default to week (7 viimast päeva)
 let activePAdminTab: PAdminTab = 'analytics'; // Default to Analüütika
 let currentServerStatus: ServerTrafficStatus = 'waiting'; // Praegu server käivitatud, Playard peal, ootab ülesannet
 let currentServerTaskDescription: string = 'Server on võrgus. Playard paigaldatud, ootab ülesannet.';
+let serverSessionTimer: any = null;
+
+export function isServersUnlocked(): boolean {
+    if (typeof window === 'undefined') return false;
+    try {
+        const expStr = sessionStorage.getItem(SERVERS_AUTH_KEY) || localStorage.getItem(SERVERS_AUTH_KEY);
+        if (!expStr) return false;
+        const exp = parseInt(expStr, 10);
+        if (Date.now() < exp) {
+            return true;
+        } else {
+            sessionStorage.removeItem(SERVERS_AUTH_KEY);
+            localStorage.removeItem(SERVERS_AUTH_KEY);
+            return false;
+        }
+    } catch {
+        return false;
+    }
+}
+
+export function unlockServersSession(): void {
+    if (typeof window === 'undefined') return;
+    const expiresAt = Date.now() + SERVERS_SESSION_DURATION_MS;
+    try {
+        sessionStorage.setItem(SERVERS_AUTH_KEY, String(expiresAt));
+        localStorage.setItem(SERVERS_AUTH_KEY, String(expiresAt));
+    } catch {}
+}
+
+export function lockServersSession(): void {
+    if (typeof window === 'undefined') return;
+    try {
+        sessionStorage.removeItem(SERVERS_AUTH_KEY);
+        localStorage.removeItem(SERVERS_AUTH_KEY);
+    } catch {}
+}
+
+export async function getServersPasswordFromDb(): Promise<string> {
+    if (supabase) {
+        try {
+            const { data } = await supabase
+                .from('user_created_games')
+                .select('description')
+                .eq('title', 'PADMIN_SERVERS_AUTH')
+                .maybeSingle();
+            if (data?.description) {
+                const parsed = JSON.parse(data.description);
+                if (parsed?.password) return parsed.password;
+            }
+        } catch (e) {
+            console.warn('Failed to fetch servers password from DB:', e);
+        }
+    }
+    return DEFAULT_SERVERS_PASSWORD;
+}
+
+export async function saveServersPasswordToDb(pwd: string): Promise<boolean> {
+    if (!supabase) return false;
+    try {
+        const { data: existing } = await supabase
+            .from('user_created_games')
+            .select('id')
+            .eq('title', 'PADMIN_SERVERS_AUTH')
+            .maybeSingle();
+
+        const payload = JSON.stringify({ password: pwd, updatedAt: new Date().toISOString() });
+        if (existing?.id) {
+            await supabase
+                .from('user_created_games')
+                .update({ description: payload, category: 'padmin_server_access' })
+                .eq('id', existing.id);
+        } else {
+            await supabase
+                .from('user_created_games')
+                .insert({
+                    title: 'PADMIN_SERVERS_AUTH',
+                    description: payload,
+                    category: 'padmin_server_access',
+                    creator_username: 'playard owner'
+                });
+        }
+        return true;
+    } catch (e) {
+        console.warn('Failed to save servers password to DB:', e);
+        return false;
+    }
+}
 
 export function setServerTrafficStatus(status: ServerTrafficStatus, taskDescription?: string) {
     currentServerStatus = status;
@@ -776,8 +867,138 @@ function renderPAdminDashboard(
         </div>
     `;
 
-    // Servers Card HTML
-    const serversContentHtml = `
+    // Servers Tab Content (Password Protected with 2 min session)
+    const isUnlocked = isServersUnlocked();
+    const remainingSessionMs = (() => {
+        try {
+            const exp = parseInt(sessionStorage.getItem(SERVERS_AUTH_KEY) || localStorage.getItem(SERVERS_AUTH_KEY) || '0', 10);
+            return Math.max(0, exp - Date.now());
+        } catch { return 0; }
+    })();
+    const remainMinutes = Math.floor(remainingSessionMs / 60000);
+    const remainSeconds = Math.floor((remainingSessionMs % 60000) / 1000);
+    const remainDisplay = `${remainMinutes}:${remainSeconds < 10 ? '0' : ''}${remainSeconds}`;
+
+    const serversAuthPromptHtml = `
+        <div id="padmin-servers-auth-card" style="
+            width: 520px;
+            max-width: calc(100vw - 32px);
+            background: #ffffff;
+            border: 2px solid #e2e8f0;
+            border-radius: 24px;
+            box-shadow: 0 16px 45px rgba(0, 0, 0, 0.08);
+            padding: 40px 32px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #0f172a;
+            margin-top: 40px;
+        ">
+            <div style="
+                width: 68px;
+                height: 68px;
+                border-radius: 20px;
+                background: linear-gradient(135deg, #eff6ff, #dbeafe);
+                border: 2px solid #bfdbfe;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 2rem;
+                box-shadow: 0 6px 18px rgba(37, 99, 235, 0.12);
+            ">
+                🔒
+            </div>
+
+            <div style="text-align: center;">
+                <h2 style="margin: 0; font-size: 1.4rem; font-weight: 900; letter-spacing: -0.3px; color: #0f172a;">
+                    Serverite Turvaline Juurdepääs
+                </h2>
+                <p style="margin: 6px 0 0; font-size: 0.88rem; color: #64748b; line-height: 1.4;">
+                    Sisesta turvaparool serverite infrastruktuuri ja juhtpaneeli vaatamiseks. Sessioon kestab <strong>2 minutit</strong>.
+                </p>
+            </div>
+
+            <div style="width: 100%; display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
+                <label style="font-size: 0.82rem; font-weight: 800; color: #334155; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Serveri Parool
+                </label>
+                <div style="position: relative; width: 100%;">
+                    <input type="password" id="padmin-servers-password-input" placeholder="Sisesta parool..." style="
+                        width: 100%;
+                        padding: 13px 44px 13px 16px;
+                        background: #f8fafc;
+                        border: 2px solid #cbd5e1;
+                        border-radius: 12px;
+                        font-size: 1rem;
+                        font-weight: 700;
+                        color: #0f172a;
+                        box-sizing: border-box;
+                        outline: none;
+                        transition: all 0.15s ease;
+                    " onfocus="this.style.borderColor='#2563eb'; this.style.background='#ffffff';" onblur="this.style.borderColor='#cbd5e1'; this.style.background='#f8fafc';" />
+                    <button type="button" id="btn-toggle-servers-pwd" style="
+                        position: absolute;
+                        right: 12px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        background: none;
+                        border: none;
+                        cursor: pointer;
+                        font-size: 1.1rem;
+                        color: #64748b;
+                        padding: 4px;
+                    ">👁️</button>
+                </div>
+                <div id="padmin-servers-auth-error" style="display: none; color: #ef4444; font-size: 0.82rem; font-weight: 800; margin-top: 2px;">
+                    ❌ Vale parool! Kontrolli ja proovi uuesti.
+                </div>
+            </div>
+
+            <div style="width: 100%; display: flex; gap: 12px; margin-top: 10px;">
+                <button type="button" id="btn-padmin-servers-cancel" style="
+                    flex: 1;
+                    padding: 12px 18px;
+                    background: #f1f5f9;
+                    color: #475569;
+                    border: 2px solid #e2e8f0;
+                    border-radius: 12px;
+                    font-size: 0.92rem;
+                    font-weight: 800;
+                    cursor: pointer;
+                    transition: all 0.15s;
+                ">
+                    Tühista
+                </button>
+                <button type="button" id="btn-padmin-servers-submit" style="
+                    flex: 2;
+                    padding: 12px 20px;
+                    background: linear-gradient(135deg, #111827, #1f2937);
+                    color: #ffffff;
+                    border: none;
+                    border-radius: 12px;
+                    font-size: 0.95rem;
+                    font-weight: 800;
+                    cursor: pointer;
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+                    transition: transform 0.15s, box-shadow 0.15s;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                ">
+                    <span>🔓</span>
+                    <span>Ava Serverid</span>
+                </button>
+            </div>
+        </div>
+    `;
+
+    // Servers Card HTML (Shown when unlocked)
+    const serversUnlockedHtml = `
         <div id="padmin-servers-card" style="
             width: 1220px;
             max-width: calc(100vw - 32px);
@@ -795,7 +1016,39 @@ function renderPAdminDashboard(
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             color: #0f172a;
             min-height: 520px;
+            position: relative;
         ">
+            <!-- Session Countdown & Lock button -->
+            <div style="
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                padding: 6px 14px;
+                border-radius: 9999px;
+                font-size: 0.8rem;
+                font-weight: 700;
+                color: #475569;
+            ">
+                <span>⏱️ Sessioon: <strong id="padmin-servers-timer-text" style="color: #2563eb;">${remainDisplay}</strong></span>
+                <span style="color: #cbd5e1;">|</span>
+                <button type="button" id="btn-padmin-servers-lock-now" style="
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    color: #ef4444;
+                    font-size: 0.8rem;
+                    font-weight: 800;
+                    padding: 0;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                ">
+                    <span>🔒</span> <span>Lukusta kohe</span>
+                </button>
+            </div>
+
             <div style="text-align: center;">
                 <h1 style="margin: 0; font-size: 1.5rem; font-weight: 900; letter-spacing: -0.4px; color: #0f172a;">
                     Playardi Serverid
@@ -833,7 +1086,7 @@ function renderPAdminDashboard(
                 <!-- Server 1 -->
                 <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
                     <div style="font-size: 0.88rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 6px;">
-                        <span>🖥️</span> <span>Server 1 (192.168.1.219)</span>
+                        <span>🖥️</span> <span>Server 1 (192.168.1.10)</span>
                         <span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 6px; background: #e0e7ff; color: #4338ca; font-weight: 800;">Master</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 14px;">
@@ -907,7 +1160,7 @@ function renderPAdminDashboard(
                 <!-- Server 2 -->
                 <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
                     <div style="font-size: 0.88rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 6px;">
-                        <span>🖥️</span> <span>Server 2 (192.168.1.201)</span>
+                        <span>🖥️</span> <span>Server 2 (192.168.1.6)</span>
                         <span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 6px; background: #dcfce7; color: #15803d; font-weight: 800;">Worker Node</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 14px;">
@@ -1010,6 +1263,8 @@ function renderPAdminDashboard(
             </div>
         </div>
     `;
+
+    const serversContentHtml = isUnlocked ? serversUnlockedHtml : serversAuthPromptHtml;
 
     const html = `
         <!-- Top Header Bar with Logout and Categories (Analüütika, Updates, Serverid) to the right -->
@@ -1341,6 +1596,133 @@ function renderPAdminDashboard(
                 }
             }, 50);
         });
+    }
+
+    // If on servers tab, attach password authentication logic or active session timer
+    if (currentTab === 'servers') {
+        if (!isUnlocked) {
+            // Clear any active timer
+            if (serverSessionTimer) {
+                clearInterval(serverSessionTimer);
+                serverSessionTimer = null;
+            }
+
+            const pwdInput = container.querySelector('#padmin-servers-password-input') as HTMLInputElement | null;
+            const toggleBtn = container.querySelector('#btn-toggle-servers-pwd') as HTMLButtonElement | null;
+            const submitBtn = container.querySelector('#btn-padmin-servers-submit') as HTMLButtonElement | null;
+            const cancelBtn = container.querySelector('#btn-padmin-servers-cancel') as HTMLButtonElement | null;
+            const errorEl = container.querySelector('#padmin-servers-auth-error') as HTMLElement | null;
+
+            // Auto focus password input
+            setTimeout(() => pwdInput?.focus(), 50);
+
+            toggleBtn?.addEventListener('click', () => {
+                if (pwdInput) {
+                    pwdInput.type = pwdInput.type === 'password' ? 'text' : 'password';
+                }
+            });
+
+            cancelBtn?.addEventListener('click', () => {
+                activePAdminTab = 'analytics';
+                renderPAdminDashboard(container, accountPoints, gamePoints, period, 'analytics');
+            });
+
+            const handleAuth = async () => {
+                const entered = pwdInput?.value.trim() || '';
+                if (!entered) {
+                    if (errorEl) {
+                        errorEl.textContent = '❌ Palun sisesta parool!';
+                        errorEl.style.display = 'block';
+                    }
+                    pwdInput?.focus();
+                    return;
+                }
+
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.style.opacity = '0.7';
+                    submitBtn.innerHTML = `<span>⏳</span> <span>Kontrollin...</span>`;
+                }
+
+                // Kontrollime nii andmebaasist (Supabase) kui ka vaikeväärtusest
+                const dbPassword = await getServersPasswordFromDb();
+                const isValid = entered === dbPassword || entered === DEFAULT_SERVERS_PASSWORD;
+
+                if (isValid) {
+                    // Veendume, et andmebaasis on see parool salvestatud
+                    saveServersPasswordToDb(DEFAULT_SERVERS_PASSWORD).catch(() => {});
+
+                    unlockServersSession();
+                    activePAdminTab = 'servers';
+                    renderPAdminDashboard(container, accountPoints, gamePoints, period, 'servers');
+                } else {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.style.opacity = '1';
+                        submitBtn.innerHTML = `<span>🔓</span> <span>Ava Serverid</span>`;
+                    }
+                    if (errorEl) {
+                        errorEl.textContent = '❌ Vale parool! Kontrolli ja proovi uuesti.';
+                        errorEl.style.display = 'block';
+                    }
+                    if (pwdInput) {
+                        pwdInput.select();
+                        pwdInput.focus();
+                    }
+                }
+            };
+
+            submitBtn?.addEventListener('click', handleAuth);
+            pwdInput?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    handleAuth();
+                }
+            });
+        } else {
+            // Already unlocked: start live 2-minute countdown timer
+            if (serverSessionTimer) {
+                clearInterval(serverSessionTimer);
+                serverSessionTimer = null;
+            }
+
+            const lockNowBtn = container.querySelector('#btn-padmin-servers-lock-now') as HTMLButtonElement | null;
+            lockNowBtn?.addEventListener('click', () => {
+                lockServersSession();
+                if (serverSessionTimer) {
+                    clearInterval(serverSessionTimer);
+                    serverSessionTimer = null;
+                }
+                activePAdminTab = 'servers';
+                renderPAdminDashboard(container, accountPoints, gamePoints, period, 'servers');
+            });
+
+            serverSessionTimer = setInterval(() => {
+                if (activePAdminTab !== 'servers') {
+                    clearInterval(serverSessionTimer);
+                    serverSessionTimer = null;
+                    return;
+                }
+
+                if (!isServersUnlocked()) {
+                    // Session expired! Lock and return back to lock screen / analytics
+                    clearInterval(serverSessionTimer);
+                    serverSessionTimer = null;
+                    renderPAdminDashboard(container, accountPoints, gamePoints, period, 'servers');
+                    return;
+                }
+
+                const timerTextEl = container.querySelector('#padmin-servers-timer-text');
+                if (timerTextEl) {
+                    try {
+                        const exp = parseInt(sessionStorage.getItem(SERVERS_AUTH_KEY) || localStorage.getItem(SERVERS_AUTH_KEY) || '0', 10);
+                        const msLeft = Math.max(0, exp - Date.now());
+                        const m = Math.floor(msLeft / 60000);
+                        const s = Math.floor((msLeft % 60000) / 1000);
+                        timerTextEl.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+                    } catch {}
+                }
+            }, 1000);
+        }
     }
 }
 
