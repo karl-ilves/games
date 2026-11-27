@@ -1312,7 +1312,7 @@ function renderPAdminDashboard(
                 Log Out
             </button>
 
-            <!-- Categories Tabs: 1) Analüütika, 2) Updates, 3) Serverid -->
+            <!-- Categories Tabs: 1) Analüütika, 2) Updates -->
             <div id="padmin-category-tabs" style="
                 pointer-events: auto;
                 display: inline-flex;
@@ -1347,18 +1347,6 @@ function renderPAdminDashboard(
                     color: ${currentTab === 'updates' ? '#ffffff' : '#64748b'};
                     box-shadow: ${currentTab === 'updates' ? '0 2px 8px rgba(0,0,0,0.15)' : 'none'};
                 ">🚀 Updates</button>
-                <button class="padmin-tab-btn" data-tab="servers" style="
-                    padding: 8px 22px;
-                    border: none;
-                    border-radius: 9999px;
-                    cursor: pointer;
-                    font-size: 0.9rem;
-                    font-weight: 800;
-                    transition: all 0.15s;
-                    background: ${currentTab === 'servers' ? '#111827' : 'transparent'};
-                    color: ${currentTab === 'servers' ? '#ffffff' : '#64748b'};
-                    box-shadow: ${currentTab === 'servers' ? '0 2px 8px rgba(0,0,0,0.15)' : 'none'};
-                ">🖥️ Serverid</button>
             </div>
         </div>
 
