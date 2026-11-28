@@ -3,9 +3,9 @@
 Playard Cluster Overheat Simulation Tool
 ----------------------------------------
 Käivitab ülekuumenemise simulatsiooni määratud serveril:
-1. Ülekuumenenud serveril jääb punane LED-tuli (PWR) püsivalt põlema määratud ajaks (nt 20s).
-2. Server 1 (192.168.1.10) 3.5mm helipesast mängib tuletõrjeauto häiresireen: server_fire_car_alarm.wav korduvalt (loop), kuni aeg saab täis.
-3. Simulatsiooni lõppedes taastatakse LED normaalsele olekule.
+1. Ülekuumenenud serveril (nt Server 2) jääb punane LED-tuli (PWR) PÜSIVALT PÕLEMA terveks määratud ajaks.
+2. Server 1 (192.168.1.10) 3.5mm helipesast mängib tugevdatud (valjem) tuletõrjeauto häiresireen: server_fire_car_alarm.wav loopina.
+3. Simulatsiooni lõppedes taastatakse serveri LED normaalsele vilkumisele/olekule.
 """
 
 import sys
@@ -32,21 +32,28 @@ def run_ssh(host, cmd, timeout=30):
     """
     return subprocess.run(["expect", "-c", expect_script], capture_output=True, text=True)
 
-def activate_red_led(target_host, duration_sec):
-    print(f"🔴 [LED] Süütan punase PWR LED-tule püsivalt serveril {target_host} ({duration_sec} sek)...")
-    cmd = f'echo {PASS} | sudo -S sh -c "echo none > /sys/class/leds/PWR/trigger && echo 1 > /sys/class/leds/PWR/brightness && sleep {duration_sec} && echo default-on > /sys/class/leds/PWR/trigger"'
-    run_ssh(target_host, cmd, timeout=duration_sec + 10)
-    print(f"🟢 [LED] Serveri {target_host} LED taastatud normaalsele olekule.")
+def activate_red_led_persistent(target_host, duration_sec):
+    print(f"🔴 [LED] Süütan punase PWR LED-tule PÜSIVALT serveril {target_host} ({duration_sec} sek)...")
+    # Tell Server 2 playard_led_daemon via OVERHEAT_TEST_FILE to keep solid RED LED
+    ts_cmd = f"python3 -c \\\"import time; print(time.time() + {duration_sec})\\\" > /tmp/playard_led_overheat_test"
+    run_ssh(target_host, ts_cmd, timeout=5)
+    
+    # Also write directly to sysfs to guarantee immediate solid red light
+    sysfs_cmd = f'echo {PASS} | sudo -S sh -c "echo none > /sys/class/leds/PWR/trigger && echo 1 > /sys/class/leds/PWR/brightness && echo 0 > /sys/class/leds/ACT/brightness"'
+    run_ssh(target_host, sysfs_cmd, timeout=5)
 
-def play_s1_fire_car_alarm(duration_sec):
-    print(f"🚨 [ALARM] Mängin server_fire_car_alarm.wav Server 1 ({S1_HOST}) kõlarist {duration_sec} sek...")
+    time.sleep(duration_sec)
+    print(f"🟢 [LED] Simulatsiooni aeg läbi, luban taastada normaalse režiimi.")
+
+def play_s1_fire_car_alarm_loud(duration_sec):
+    print(f"🚨 [ALARM] Mängin VALJUT tuletõrjeauto häiresireeni Server 1 ({S1_HOST}) 3.5mm pesast {duration_sec} sek...")
     start_time = time.time()
-    # Ensure audio setup
-    init_cmd = "amixer -c 0 sset PCM 100% unmute"
+    
+    # Set maximum output on Server 1
+    init_cmd = "amixer -c 0 sset PCM 100% unmute; amixer -c 0 cset numid=1 400 2>/dev/null"
     run_ssh(S1_HOST, init_cmd, timeout=5)
     
     while time.time() - start_time < duration_sec:
-        # Play fire car alarm wav
         play_cmd = "aplay -D plughw:0,0 /tmp/server_fire_car_alarm.wav"
         run_ssh(S1_HOST, play_cmd, timeout=12)
 
@@ -56,18 +63,18 @@ def main():
     
     target_ip = S2_HOST if target in ["s.2", "s2", "server2", "192.168.1.6"] else S1_HOST
     print(f"🔥 Käivitan {duration} sek ülekuumenemise simulatsiooni!")
-    print(f"🔥 Ülekuumenev server: {target} ({target_ip}) - Punane tuli PÕLEB {duration}s!")
-    print(f"🔥 Häiresireen: Server 1 ({S1_HOST}) 3.5mm kõlarist (server_fire_car_alarm.wav)!")
+    print(f"🔥 Ülekuumenev server: {target} ({target_ip}) -> Punane PWR LED püsib SEES {duration}s!")
+    print(f"🔥 Valjem häirealarm: Server 1 ({S1_HOST}) 3.5mm kõlarist (server_fire_car_alarm.wav loop)!")
 
-    t_led = threading.Thread(target=activate_red_led, args=(target_ip, duration))
-    t_alarm = threading.Thread(target=play_s1_fire_car_alarm, args=(duration,))
+    t_led = threading.Thread(target=activate_red_led_persistent, args=(target_ip, duration))
+    t_alarm = threading.Thread(target=play_s1_fire_car_alarm_loud, args=(duration,))
 
     t_led.start()
     t_alarm.start()
 
     t_led.join()
     t_alarm.join()
-    print("✅ 20s Ülekuumenemise simulatsioon edukalt lõppenud!")
+    print("✅ Ülekuumenemise test edukalt lõppenud!")
 
 if __name__ == "__main__":
     main()
