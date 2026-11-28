@@ -414,16 +414,17 @@ Playard Game Team`;
             const isTestEmail = targetEmail.endsWith('@example.com') || (typeof window !== 'undefined' && (window as any).__PLAYARD_IS_TESTING__);
             if (!isTestEmail) {
                 const detailedMessage =
-`Hello!
-Thank you for using Playard's Forgot Password.
-Here is your 6-digit password:
+`Tere!
+kahju et te parooli ära unustasite
+siin on 6 kohaline parool
 
 ==================================================
                  ${code}
 ==================================================
 
-Have a great gaming experience!
-Playard Game Team`;
+Sisestage se siis te saate parooli vahetada
+head mängu elamusi
+playard game team`;
 
                 const templateParams = {
                     from_name: 'Playard Games',
@@ -436,7 +437,7 @@ Playard Game Team`;
                     reply_to: targetEmail,
                     username: cleanUser,
                     user_name: cleanUser,
-                    subject: `Playard Games - Your 6-digit Password: ${code}`,
+                    subject: `Playard Games - 6-kohaline parool: ${code}`,
                     passcode: code,
                     password: code,
                     message: detailedMessage
@@ -448,7 +449,7 @@ Playard Game Team`;
                 type: 'recovery',
                 recipient: targetEmail,
                 username: cleanUser,
-                subject: `Playard Games - Your 6-digit Password Reset Code: ${code}`
+                subject: `Playard Games - 6-kohaline parool: ${code}`
             });
             return {
                 success: true,
