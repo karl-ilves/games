@@ -155,6 +155,89 @@ export async function saveServersPasswordToDb(pwd: string): Promise<boolean> {
     }
 }
 
+const PADMIN_LAST_SEEN_LOGOUT_KEY = 'playard_padmin_last_seen_logout_ts';
+let padminForceLogoutCheckInterval: any = null;
+
+export async function checkPAdminGlobalForceLogout(): Promise<boolean> {
+    if (!supabase) return false;
+    try {
+        const { data } = await supabase
+            .from('user_created_games')
+            .select('description')
+            .eq('title', 'PADMIN_GLOBAL_FORCE_LOGOUT')
+            .maybeSingle();
+        if (data?.description) {
+            const parsed = JSON.parse(data.description);
+            const forceLogoutAt = parsed?.forceLogoutAt || 0;
+            if (forceLogoutAt > 0) {
+                const lastSeen = parseInt(localStorage.getItem(PADMIN_LAST_SEEN_LOGOUT_KEY) || '0', 10);
+                if (forceLogoutAt > lastSeen) {
+                    // Update last seen and perform logout
+                    localStorage.setItem(PADMIN_LAST_SEEN_LOGOUT_KEY, String(forceLogoutAt));
+                    performPAdminLogout();
+                    return true;
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Failed to check PAdmin global logout:', e);
+    }
+    return false;
+}
+
+export function performPAdminLogout(): void {
+    if (typeof window === 'undefined') return;
+    try {
+        lockServersSession();
+        localStorage.removeItem('playard_current_user_profile');
+        sessionStorage.removeItem('playard_current_user_profile');
+    } catch {}
+
+    const originalLogout = document.getElementById('btn-logout');
+    if (originalLogout) {
+        originalLogout.click();
+    } else {
+        window.location.reload();
+    }
+}
+
+export async function triggerPAdminGlobalForceLogout(): Promise<boolean> {
+    const now = Date.now();
+    try {
+        localStorage.setItem(PADMIN_LAST_SEEN_LOGOUT_KEY, String(now));
+    } catch {}
+
+    if (supabase) {
+        try {
+            const payload = JSON.stringify({ forceLogoutAt: now, reason: 'PAdmin global logout triggered by owner' });
+            const { data: existing } = await supabase
+                .from('user_created_games')
+                .select('id')
+                .eq('title', 'PADMIN_GLOBAL_FORCE_LOGOUT')
+                .maybeSingle();
+            if (existing?.id) {
+                await supabase
+                    .from('user_created_games')
+                    .update({ description: payload, category: 'padmin_auth_control' })
+                    .eq('id', existing.id);
+            } else {
+                await supabase
+                    .from('user_created_games')
+                    .insert({
+                        title: 'PADMIN_GLOBAL_FORCE_LOGOUT',
+                        description: payload,
+                        category: 'padmin_auth_control',
+                        creator_username: 'playard owner'
+                    });
+            }
+        } catch (e) {
+            console.warn('Failed to trigger PAdmin global logout in DB:', e);
+        }
+    }
+    performPAdminLogout();
+    return true;
+}
+
 export function setServerTrafficStatus(status: ServerTrafficStatus, taskDescription?: string) {
     currentServerStatus = status;
     if (taskDescription !== undefined) {
@@ -1361,13 +1444,7 @@ function renderPAdminDashboard(
     // Attach logout button
     const logoutBtn = container.querySelector('#btn-padmin-logout');
     logoutBtn?.addEventListener('click', () => {
-        const originalLogout = document.getElementById('btn-logout');
-        if (originalLogout) {
-            originalLogout.click();
-        } else {
-            localStorage.removeItem('playard_current_user_profile');
-            window.location.reload();
-        }
+        performPAdminLogout();
     });
 
     // Attach category tabs (Analüütika vs Updates)
@@ -1736,6 +1813,16 @@ export async function applyPAdminModeIfNeeded(profile?: { username?: string | nu
     let containerEl = document.getElementById(PADMIN_CONTAINER_ID);
 
     if (isPAdmin) {
+        // Kontrollime esmalt, kas PAdminile on antud globaalne väljalogimise käsk
+        const didLogout = await checkPAdminGlobalForceLogout();
+        if (didLogout) return;
+
+        if (!padminForceLogoutCheckInterval) {
+            padminForceLogoutCheckInterval = setInterval(() => {
+                checkPAdminGlobalForceLogout();
+            }, 5000);
+        }
+
         if (!styleEl) {
             styleEl = document.createElement('style');
             styleEl.id = PADMIN_STYLE_ID;
@@ -1787,6 +1874,10 @@ export async function applyPAdminModeIfNeeded(profile?: { username?: string | nu
         const gamePoints = buildDailyPoints(games, activePeriod);
         renderPAdminDashboard(containerEl, accPoints, gamePoints, activePeriod, activePAdminTab);
     } else {
+        if (padminForceLogoutCheckInterval) {
+            clearInterval(padminForceLogoutCheckInterval);
+            padminForceLogoutCheckInterval = null;
+        }
         activePAdminTab = 'analytics';
         activePeriod = 'week';
         document.documentElement.classList.remove('padmin-mode');
