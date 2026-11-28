@@ -238,27 +238,16 @@ export class ForgotPasswordService {
             const isTestEmail = cleanEmail.endsWith('@example.com') || (typeof window !== 'undefined' && (window as any).__PLAYARD_IS_TESTING__);
             if (!isTestEmail) {
                 const detailedActivationMessage =
-`Hello, dear Playard player!
+`Hello!
+Thank you for using Playard's Forgot Password.
+Here is your 6-digit password:
 
-You have requested to activate "Forgot Password" protection for your Playard Games account "${cleanUser}".
+==================================================
+                 ${code}
+==================================================
 
---------------------------------------------------
-🔑 YOUR 6-DIGIT ACTIVATION CODE IS:
-👉  ${code}  👈
---------------------------------------------------
-
-HOW TO USE IT:
-1. Return to the open activation window on Playard Games.
-2. Enter your 6-digit confirmation code: ${code}
-3. Click "✅ Confirm & Activate".
-
-Once activated, your email "${cleanEmail}" is securely linked to your account "${cleanUser}". If you ever forget your password, you can easily reset it using this code!
-
-This code expires in 15 minutes. If you did not request this, you can safely ignore this email.
-
-Best regards,
-The Playard Games Team
-https://www.playardgames.com`;
+Have a great gaming experience!
+Playard Game Team`;
 
                 const templateParams = {
                     from_name: 'Playard Games',
@@ -271,7 +260,7 @@ https://www.playardgames.com`;
                     reply_to: cleanEmail,
                     username: cleanUser,
                     user_name: cleanUser,
-                    subject: `Playard Games - Your 6-digit Activation Code: ${code}`,
+                    subject: `Playard Games - Your 6-digit Password: ${code}`,
                     passcode: code,
                     password: code,
                     message: detailedActivationMessage
@@ -425,25 +414,16 @@ https://www.playardgames.com`;
             const isTestEmail = targetEmail.endsWith('@example.com') || (typeof window !== 'undefined' && (window as any).__PLAYARD_IS_TESTING__);
             if (!isTestEmail) {
                 const detailedMessage =
-`Hello, dear Playard player!
+`Hello!
+Thank you for using Playard's Forgot Password.
+Here is your 6-digit password:
 
-You are resetting your password for your Playard Games account "${cleanUser}".
+==================================================
+                 ${code}
+==================================================
 
---------------------------------------------------
-🔑 YOUR 6-DIGIT RECOVERY CODE IS:
-👉  ${code}  👈
---------------------------------------------------
-
-HOW TO USE IT:
-1. Return to the "Forgot Password" modal on Playard Games.
-2. Enter your 6-digit recovery code: ${code}
-3. Click "✅ Confirm Code" and choose your new password!
-
-This code expires in 15 minutes. If you did not request a password reset, you can safely ignore this email.
-
-Best regards,
-The Playard Games Team
-https://www.playardgames.com`;
+Have a great gaming experience!
+Playard Game Team`;
 
                 const templateParams = {
                     from_name: 'Playard Games',
@@ -456,7 +436,7 @@ https://www.playardgames.com`;
                     reply_to: targetEmail,
                     username: cleanUser,
                     user_name: cleanUser,
-                    subject: `Playard Games - Your 6-digit Password Reset Code: ${code}`,
+                    subject: `Playard Games - Your 6-digit Password: ${code}`,
                     passcode: code,
                     password: code,
                     message: detailedMessage
